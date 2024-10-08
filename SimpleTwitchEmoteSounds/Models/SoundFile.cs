@@ -8,5 +8,13 @@ public partial class SoundFile : ObservableObject
 {
     [ObservableProperty] private string _fileName = string.Empty;
     [ObservableProperty] private string _filePath = string.Empty;
-    [ObservableProperty] private float _percentage = 1;
+    [ObservableProperty] private float? _percentage = 1;
+
+    partial void OnPercentageChanged(float? value)
+    {
+        if (value == null)
+        {
+            Percentage = 1;
+        }
+    }
 }

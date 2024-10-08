@@ -91,7 +91,7 @@ public partial class DashboardViewModel : ViewModelBase
                 continue;
             }
 
-            var shouldPlay = ShouldPlaySound(soundCommand.PlayChance);
+            var shouldPlay = ShouldPlaySound(soundCommand.PlayChance ?? 1);
             Log.Information(
                 $"Command '{soundCommand.Name}' matched. Play chance: {soundCommand.PlayChance}%. Should play: {shouldPlay}");
 
