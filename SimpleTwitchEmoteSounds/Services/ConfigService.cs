@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
+using SharpHook.Native;
 using Serilog;
 using SimpleTwitchEmoteSounds.Common;
 using SimpleTwitchEmoteSounds.Models;
@@ -91,8 +94,65 @@ public static class ConfigService
             var dateString = DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss");
             var configFilePathBackup = Path.Combine(settingsFolder, $"{name}_backup_{dateString}.json");
             File.Copy(configFilePath, configFilePathBackup);
-            SaveConfig(name, defaultConfig);
-            return defaultConfig;
+            // Try to migrate otherwise use the default configuration
+            var configMigrated = MigrateConfig<T>(name, configFilePathBackup);
+            if (configMigrated == null) {
+                SaveConfig(name, defaultConfig);
+                return defaultConfig;
+            } else {
+                SaveConfig(name, configMigrated);
+                return configMigrated;
+            }
+        }
+    }
+
+    private static T? MigrateConfig<T>(string name, string configFilePath) where T : class, new()
+    {
+        if (name != "sounds" || typeof(T) != typeof(AppSettings)) {
+            Log.Information($"Unable to migrate {name} from {configFilePath}: No migrations available");
+            return null;
+        }
+        try {
+            var defaultConfig = new AppSettings();
+            var configJson = File.ReadAllText(configFilePath);
+            var soundCommands = JsonSerializer.Deserialize<NumberStringVersionSoundCommandsWrapper>(configJson);
+            Log.Information($"Detected old AppSettings [NumberStringVersion], try to migrate to latest config version...");
+            if (soundCommands == null) {
+                return null;
+            }
+            if (soundCommands.EnableKey is not null) {
+                defaultConfig.EnableKey = soundCommands.EnableKey.Value;
+            }
+            foreach (var soundCommand in soundCommands.SoundCommands)
+            {
+                var soundCommandMigrated = new SoundCommand
+                {
+                    Category = soundCommand.Category,
+                    SoundFiles = new ObservableCollection<SoundFile>(),  // Initialize empty collection
+                    Enabled = soundCommand.Enabled,
+                    IsExpanded = soundCommand.IsExpanded,
+                    PlayChance = Convert.ToSingle(soundCommand.PlayChance),
+                    SelectedMatchType = soundCommand.SelectedMatchType,
+                    Name = soundCommand.Name,
+                    Volume = Convert.ToSingle(soundCommand.Volume),
+                };
+                foreach (var soundFile in soundCommand.SoundFiles)
+                {
+                    var soundFileMigrated = new SoundFile
+                    {
+                        FileName = soundFile.FileName,
+                        FilePath = soundFile.FilePath,
+                        Percentage = Convert.ToSingle(soundFile.Percentage),
+                    };
+                    soundCommandMigrated.SoundFiles.Add(soundFileMigrated);
+                }
+                defaultConfig.SoundCommands.Add(soundCommandMigrated);
+            }
+            return defaultConfig as T;
+        }  catch (Exception e)
+        {
+            Log.Information($"Unable to migrate {name} from {configFilePath}, Migration failed: {e}");
+            return null;
         }
     }
 
@@ -103,5 +163,30 @@ public static class ConfigService
         var configFilePath = Path.Combine(settingsFolder, $"{name}.json");
         var configJson = JsonSerializer.Serialize(config, Options);
         File.WriteAllText(configFilePath, configJson);
+    }
+
+    public class NumberStringVersionSoundCommandsWrapper
+    {
+        public KeyCode? EnableKey { get; set; }
+        public required List<NumberStringVersionSoundCommand> SoundCommands { get; set; }
+    }
+
+    public class NumberStringVersionSoundCommand
+    {
+        public required string Name { get; set; }
+        public required string Category { get; set; }
+        public required List<NumberStringVersionSoundFile> SoundFiles { get; set; }
+        public required bool Enabled { get; set; }
+        public required bool IsExpanded { get; set; }
+        public required string PlayChance { get; set; }
+        public required Models.MatchType SelectedMatchType { get; set; }
+        public required string Volume { get; set; }
+    }
+
+    public class NumberStringVersionSoundFile
+    {
+        public required string FileName { get; set; }
+        public required string FilePath { get; set; }
+        public required string Percentage { get; set; }
     }
 }
