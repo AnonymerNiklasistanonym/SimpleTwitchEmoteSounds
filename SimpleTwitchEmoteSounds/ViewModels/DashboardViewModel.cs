@@ -33,7 +33,7 @@ public partial class DashboardViewModel : ViewModelBase
     [ObservableProperty] private bool _isEnabled = true;
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private string _toggleButtonText = "Register Hotkey";
-    [ObservableProperty] private string _updateButtonText = "v1.2.1";
+    [ObservableProperty] private string _updateButtonText = "v1.2.1-linux";
     [ObservableProperty] private bool _isListening;
     private static Hotkey ToggleHotkey => ConfigService.Settings.EnableHotkey;
     private static ObservableCollection<SoundCommand> SoundCommands => ConfigService.Settings.SoundCommands;
@@ -206,7 +206,7 @@ public partial class DashboardViewModel : ViewModelBase
     [RelayCommand]
     private void UpdateButton()
     {
-        const string url = "https://github.com/Ganom/SimpleTwitchEmoteSounds/releases";
+        const string url = "https://github.com/AnonymerNiklasistanonym/SimpleTwitchEmoteSounds/releases";
         Process.Start(new ProcessStartInfo(url)
         {
             UseShellExecute = true
