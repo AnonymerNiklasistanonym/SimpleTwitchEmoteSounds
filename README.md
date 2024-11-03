@@ -4,6 +4,19 @@ This application was created as a simple, easy-to-use, quick to set up, sound tr
 of entry and enable creators to add an Emote Sound within seconds, instead of the minute(s)-long process with current
 mainstream options like MixItUp and Streamer.bot.
 
+> [!NOTE]
+> This fork contains patches to:
+>
+> - Run this program natively on Linux
+> - Make configurations to floats (numbers) instead of strings that need to be parsed
+> - Add an AUR configuration to easily install it on Arch Linux derivatives using the native package manager (TODO)
+> - A GitHub Workflow (CI/CD) that automatically creates a binary for Windows and Linux
+>
+> Run the program using the command `dotnet run --project SimpleTwitchEmoteSounds`.
+> Build a single program binary to the directory `publish` using the command `dotnet publish SimpleTwitchEmoteSounds -o publish -c Release -p:PublishSingleFile=true -p:DebugType=none -p:PublishReadyToRun=false -p:IncludeNativeLibrariesForSelfExtract=true --self-contained false`.
+>
+> **TODO**: Rewrite the commits to separate patches that can easily be merged/edited.
+
 - [📝 FAQ](#-faq)
     - [🤔 What is an Emote Sound?](#-what-is-an-emote-sound)
     - [❔ Why do that?](#-why-do-that)
