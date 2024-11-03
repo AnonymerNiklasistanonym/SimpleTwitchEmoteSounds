@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Text.Json;
 using SharpHook.Native;
+using Newtonsoft.Json;
 using Serilog;
 using SimpleTwitchEmoteSounds.Common;
 using SimpleTwitchEmoteSounds.Models;
@@ -12,9 +12,9 @@ namespace SimpleTwitchEmoteSounds.Services;
 
 public static class ConfigService
 {
-    private static readonly JsonSerializerOptions Options = new()
+    private static readonly JsonSerializerSettings Options = new()
     {
-        WriteIndented = true
+        Formatting = Formatting.Indented
     };
 
     public static readonly AppSettings Settings = InitConfig<AppSettings>("sounds");
@@ -76,84 +76,17 @@ public static class ConfigService
         var settingsFolder = Path.Combine(appLocation, "Settings");
         var configFilePath = Path.Combine(settingsFolder, $"{name}.json");
 
-        var defaultConfig = new T();
         if (!File.Exists(configFilePath))
         {
             Directory.CreateDirectory(settingsFolder);
-            SaveConfig(name, defaultConfig);
+            var defaultConfig = new T();
+            var defaultConfigJson = JsonConvert.SerializeObject(defaultConfig, Options);
+            File.WriteAllText(configFilePath, defaultConfigJson);
             return defaultConfig;
         }
 
-        try {
-            var configJson = File.ReadAllText(configFilePath);
-            var config = JsonSerializer.Deserialize<T>(configJson);
-            return config ?? defaultConfig;
-        }  catch (Exception e)
-        {
-            Log.Information($"Error when trying to read configuration file: {e}");
-            var dateString = DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss");
-            var configFilePathBackup = Path.Combine(settingsFolder, $"{name}_backup_{dateString}.json");
-            File.Copy(configFilePath, configFilePathBackup);
-            // Try to migrate otherwise use the default configuration
-            var configMigrated = MigrateConfig<T>(name, configFilePathBackup);
-            if (configMigrated == null) {
-                SaveConfig(name, defaultConfig);
-                return defaultConfig;
-            } else {
-                SaveConfig(name, configMigrated);
-                return configMigrated;
-            }
-        }
-    }
-
-    private static T? MigrateConfig<T>(string name, string configFilePath) where T : class, new()
-    {
-        if (name != "sounds" || typeof(T) != typeof(AppSettings)) {
-            Log.Information($"Unable to migrate {name} from {configFilePath}: No migrations available");
-            return null;
-        }
-        try {
-            var defaultConfig = new AppSettings();
-            var configJson = File.ReadAllText(configFilePath);
-            var soundCommands = JsonSerializer.Deserialize<NumberStringVersionSoundCommandsWrapper>(configJson);
-            Log.Information($"Detected old AppSettings [NumberStringVersion], try to migrate to latest config version...");
-            if (soundCommands == null) {
-                return null;
-            }
-            if (soundCommands.EnableKey is not null) {
-                defaultConfig.EnableKey = soundCommands.EnableKey.Value;
-            }
-            foreach (var soundCommand in soundCommands.SoundCommands)
-            {
-                var soundCommandMigrated = new SoundCommand
-                {
-                    Category = soundCommand.Category,
-                    SoundFiles = new ObservableCollection<SoundFile>(),  // Initialize empty collection
-                    Enabled = soundCommand.Enabled,
-                    IsExpanded = soundCommand.IsExpanded,
-                    PlayChance = Convert.ToSingle(soundCommand.PlayChance),
-                    SelectedMatchType = soundCommand.SelectedMatchType,
-                    Name = soundCommand.Name,
-                    Volume = Convert.ToSingle(soundCommand.Volume),
-                };
-                foreach (var soundFile in soundCommand.SoundFiles)
-                {
-                    var soundFileMigrated = new SoundFile
-                    {
-                        FileName = soundFile.FileName,
-                        FilePath = soundFile.FilePath,
-                        Percentage = Convert.ToSingle(soundFile.Percentage),
-                    };
-                    soundCommandMigrated.SoundFiles.Add(soundFileMigrated);
-                }
-                defaultConfig.SoundCommands.Add(soundCommandMigrated);
-            }
-            return defaultConfig as T;
-        }  catch (Exception e)
-        {
-            Log.Information($"Unable to migrate {name} from {configFilePath}, Migration failed: {e}");
-            return null;
-        }
+        var configJson = File.ReadAllText(configFilePath);
+        return JsonConvert.DeserializeObject<T>(configJson) ?? new T();
     }
 
     private static void SaveConfig<T>(string name, T config) where T : class
@@ -161,7 +94,7 @@ public static class ConfigService
         var appLocation = AppDomain.CurrentDomain.BaseDirectory;
         var settingsFolder = Path.Combine(appLocation, "Settings");
         var configFilePath = Path.Combine(settingsFolder, $"{name}.json");
-        var configJson = JsonSerializer.Serialize(config, Options);
+        var configJson = JsonConvert.SerializeObject(config, Options);
         File.WriteAllText(configFilePath, configJson);
     }
 
