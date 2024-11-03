@@ -71,3 +71,4 @@ jobs:
         files: |
           ./publish_linux-x64/SimpleTwitchEmoteSounds
           ./publish_win-x64/SimpleTwitchEmoteSounds.exe
+          ./pkgbuild/PKGBUILD

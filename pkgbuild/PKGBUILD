@@ -1,0 +1,46 @@
+pkgname=SimpleTwitchEmoteSounds
+# Keep this variable so that a different pkgname does not break the build
+_name=SimpleTwitchEmoteSounds
+pkgver=1.2.1
+_pkgver="$pkgver-linux"
+pkgrel=1
+pkgdesc='Simple sound trigger for Twitch emotes for a Twitch channel'
+arch=('any')
+url="https://github.com/AnonymerNiklasistanonym/${_name}"
+license=('MIT')
+depends=('dotnet-runtime' 'vlc' 'ffmpeg')
+makedepends=('dotnet-sdk')
+source=("$_name-$pkgver.tar.gz::$url/archive/refs/tags/v$_pkgver.tar.gz")
+sha256sums=('SKIP')
+options=('!strip')
+
+build() {
+  cd "$srcdir/$_name-$_pkgver"
+  # Build single file executable that only needs the dotnet runtime to exist
+  dotnet publish "$_name" -c Release -o ./publish \
+    -p:PublishSingleFile=true \
+    -p:DebugType=none \
+    -p:PublishReadyToRun=false \
+    -p:IncludeNativeLibrariesForSelfExtract=true \
+    --self-contained false
+  # Create the .desktop file
+  cat <<EOF > "./publish/$_name.desktop"
+[Desktop Entry]
+Name=$pkgname
+Exec=/usr/bin/$pkgname
+Icon=/usr/share/icons/hicolor/48x48/apps/$pkgname.ico
+Type=Application
+Categories=Audio;Sound;Video;Player;
+StartupNotify=true
+EOF
+}
+
+package() {
+  cd "$srcdir/$_name-$_pkgver"
+  # Install the binary
+  install -Dm755 "publish/$_name" "$pkgdir/usr/bin/$pkgname"
+  # Install the .desktop file to the appropriate location
+  install -Dm644 "publish/$_name.desktop" "$pkgdir/usr/share/applications/$pkgname.desktop"
+  # Copy icon file to hicolor icons directory
+  install -Dm644 "$_name/Assets/cow.ico" "$pkgdir/usr/share/icons/hicolor/48x48/apps/$pkgname.ico"
+}

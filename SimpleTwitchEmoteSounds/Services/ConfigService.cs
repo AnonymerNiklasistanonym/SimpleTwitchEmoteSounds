@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using Serilog;
 using SimpleTwitchEmoteSounds.Common;
 using SimpleTwitchEmoteSounds.Models;
+using System.Runtime.InteropServices;
 
 namespace SimpleTwitchEmoteSounds.Services;
 
@@ -70,10 +71,21 @@ public static class ConfigService
         };
     }
 
-    private static T InitConfig<T>(string name) where T : class, new()
+    private static string SettingsFolder()
     {
         var appLocation = AppDomain.CurrentDomain.BaseDirectory;
         var settingsFolder = Path.Combine(appLocation, "Settings");
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            // On Linux, local config files are typically stored in ~/.config
+            settingsFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "SimpleTwitchEmoteSounds", "Settings");
+        }
+        return settingsFolder;
+    }
+
+    private static T InitConfig<T>(string name) where T : class, new()
+    {
+        var settingsFolder = SettingsFolder();
         var configFilePath = Path.Combine(settingsFolder, $"{name}.json");
 
         if (!File.Exists(configFilePath))
@@ -91,8 +103,7 @@ public static class ConfigService
 
     private static void SaveConfig<T>(string name, T config) where T : class
     {
-        var appLocation = AppDomain.CurrentDomain.BaseDirectory;
-        var settingsFolder = Path.Combine(appLocation, "Settings");
+        var settingsFolder = SettingsFolder();
         var configFilePath = Path.Combine(settingsFolder, $"{name}.json");
         var configJson = JsonConvert.SerializeObject(config, Options);
         File.WriteAllText(configFilePath, configJson);
