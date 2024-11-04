@@ -10,6 +10,11 @@ on:
   push:
     branches:
       - master
+      - feature-windows-installer-nsis 
+  # Run CI on pull requests to any branch
+  pull_request:
+  # Run CI on manual request
+  workflow_dispatch:
 
 jobs:
   push-deploy:
