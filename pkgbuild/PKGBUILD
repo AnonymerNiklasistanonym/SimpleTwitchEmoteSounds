@@ -61,7 +61,8 @@ build() {
     -p:DebugType=none \
     -p:PublishReadyToRun=false \
     -p:IncludeNativeLibrariesForSelfExtract=true \
-    --self-contained false
+    --self-contained false \
+    -p:DefineConstants="CUSTOM_FEATURE_INSTALLED"
 }
 
 package() {

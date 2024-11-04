@@ -74,11 +74,18 @@ public static class ConfigService
     {
         var appLocation = AppDomain.CurrentDomain.BaseDirectory;
         var settingsFolder = Path.Combine(appLocation, "Settings");
+        #if CUSTOM_FEATURE_INSTALLED
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            // On Windows local config files are typically stored in %AppData%/program
+            settingsFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SimpleTwitchEmoteSounds", "Settings");
+        }
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
-            // On Linux, local config files are typically stored in ~/.config
+            // On Linux local config files are typically stored in ~/.config/program
             settingsFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "SimpleTwitchEmoteSounds", "Settings");
         }
+        #endif
         return settingsFolder;
     }
 
