@@ -152,10 +152,13 @@ Section "${PRODUCT_DISPLAY_NAME} ($(LangStrRequired))" Section1
   WriteRegStr HKCU "Software\${PRODUCT}" "" "$INSTDIR"
 
   ;Register the application in Add/Remove Programs under HKCU
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayName" "${PRODUCT_DISPLAY_NAME} ${PRODUCT_VERSION}"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayName" "${PRODUCT_DISPLAY_NAME}"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayVersion" "${PRODUCT_VERSION}"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayIcon" "$INSTDIR\${PRODUCT}.ico"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "Publisher" "${PRODUCT_PUBLISHER}"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "UninstallString" "$\"$INSTDIR\${PRODUCT}_uninstaller.exe$\""
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "QuietUninstallString" "$\"$INSTDIR\${PRODUCT}_uninstaller.exe$\" /S"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "URLInfoAbout" "$\"${PRODUCT_URL}$\""
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "URLInfoAbout" "${PRODUCT_URL}"
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "NoModify" 1
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "NoRepair" 1
 
@@ -165,9 +168,9 @@ Section "${PRODUCT_DISPLAY_NAME} ($(LangStrRequired))" Section1
 
   ;Create start menu shortcut for program, settings directory, and uninstaller
   CreateDirectory "$SMPROGRAMS\${PRODUCT}"
-  CreateShortCut "$SMPROGRAMS\${PRODUCT}\${PRODUCT_DISPLAY_NAME} ${PRODUCT_VERSION}.lnk" "$INSTDIR\${INSTDIR_BIN}\${PRODUCT}.exe" "" "$INSTDIR\${PRODUCT}.ico" 0
+  CreateShortCut "$SMPROGRAMS\${PRODUCT}\${PRODUCT_DISPLAY_NAME}.lnk" "$INSTDIR\${INSTDIR_BIN}\${PRODUCT}.exe" "" "$INSTDIR\${PRODUCT}.ico" 0
   CreateShortCut "$SMPROGRAMS\${PRODUCT}\${PRODUCT_DISPLAY_NAME} $(LangStrSettings).lnk" "$APPDATA\${PRODUCT}\${DATADIR_SETTINGS}"
-  CreateShortCut "$SMPROGRAMS\${PRODUCT}\$(LangStrUninstall) ${PRODUCT_DISPLAY_NAME} ${PRODUCT_VERSION}.lnk" "$INSTDIR\${PRODUCT}_uninstaller.exe" "" "$INSTDIR\${PRODUCT}_uninstaller.exe" 0
+  CreateShortCut "$SMPROGRAMS\${PRODUCT}\$(LangStrUninstall) ${PRODUCT_DISPLAY_NAME}.lnk" "$INSTDIR\${PRODUCT}_uninstaller.exe" "" "$INSTDIR\${PRODUCT}_uninstaller.exe" 0
 
   ;Create uninstaller
   WriteUninstaller "${PRODUCT}_uninstaller.exe"
@@ -229,6 +232,6 @@ Function createDesktopShortcut
   SetOutPath "$INSTDIR\${INSTDIR_BIN}"
 
   ;Create Desktop shortcut to main component
-  CreateShortCut "$DESKTOP\${PRODUCT_DISPLAY_NAME} ${PRODUCT_VERSION}.lnk" "$INSTDIR\${INSTDIR_BIN}\${PRODUCT}.exe" "" "$INSTDIR\${PRODUCT}.ico" 0
+  CreateShortCut "$DESKTOP\${PRODUCT_DISPLAY_NAME}.lnk" "$INSTDIR\${INSTDIR_BIN}\${PRODUCT}.exe" "" "$INSTDIR\${PRODUCT}.ico" 0
 
 FunctionEnd
