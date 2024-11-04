@@ -65,10 +65,20 @@ jobs:
     # -> publish_win-x64
     #    |
     #    +- SimpleTwitchEmoteSounds.exe
+    - name: Generate Changelog
+      run: |
+        echo "Linux and Windows binary require the [.NET runtime](https://dotnet.microsoft.com/en-us/download) to run." > ${{ github.workspace }}-CHANGELOG.txt
+        echo "Linux requires the binary to be marked as executable (\`chmod +x SimpleTwitchEmoteSounds\`)." >> ${{ github.workspace }}-CHANGELOG.txt
+        echo "" >> ${{ github.workspace }}-CHANGELOG.txt
+        echo "**\`sha256sum\`s:**" >> ${{ github.workspace }}-CHANGELOG.txt
+        echo "" >> ${{ github.workspace }}-CHANGELOG.txt
+        echo "- \`SimpleTwitchEmoteSounds\` (Linux binary): \`$(sha256sum ./publish_linux-x64/SimpleTwitchEmoteSounds | awk '{print $1}')\`" >> ${{ github.workspace }}-CHANGELOG.txt
+        echo "- \`SimpleTwitchEmoteSounds.exe\` (Windows binary): \`$(sha256sum ./publish_win-x64/SimpleTwitchEmoteSounds.exe | awk '{print $1}')\`" >> ${{ github.workspace }}-CHANGELOG.txt
     - name: Release
       uses: softprops/action-gh-release@v2
       with:
+        body_path: ${{ github.workspace }}-CHANGELOG.txt
+        generate_release_notes: true
         files: |
           ./publish_linux-x64/SimpleTwitchEmoteSounds
           ./publish_win-x64/SimpleTwitchEmoteSounds.exe
-          ./pkgbuild/PKGBUILD
