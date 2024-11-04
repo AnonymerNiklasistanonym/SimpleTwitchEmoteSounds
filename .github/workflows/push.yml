@@ -10,7 +10,6 @@ on:
   push:
     branches:
       - master
-      - feature-windows-installer-nsis
   # Run CI on pull requests to any branch
   pull_request:
   # Run CI on manual request
@@ -27,6 +26,8 @@ jobs:
       Project_Path: SimpleTwitchEmoteSounds/SimpleTwitchEmoteSounds.csproj
       Output_Path: publish
       Dotnet_Publish_Runtime: ${{ startsWith(matrix.os, 'windows') && 'win' || 'linux' }}-x64
+      # Constants with which the non portable install release is compiled
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -97,8 +98,9 @@ jobs:
         echo "" >> ${{ github.workspace }}-CHANGELOG.txt
         echo "**\`sha256sum\`s:**" >> ${{ github.workspace }}-CHANGELOG.txt
         echo "" >> ${{ github.workspace }}-CHANGELOG.txt
-        echo "- \`SimpleTwitchEmoteSounds\` (Linux binary): \`$(sha256sum ./publish_linux-x64/SimpleTwitchEmoteSounds | awk '{print $1}')\`" >> ${{ github.workspace }}-CHANGELOG.txt
-        echo "- \`SimpleTwitchEmoteSounds.exe\` (Windows binary): \`$(sha256sum ./publish_win-x64/SimpleTwitchEmoteSounds.exe | awk '{print $1}')\`" >> ${{ github.workspace }}-CHANGELOG.txt
+        echo "- \`SimpleTwitchEmoteSounds\` (Linux binary): \`$(sha256sum ./publish_linux-x64-portable/SimpleTwitchEmoteSounds | awk '{print $1}')\`" >> ${{ github.workspace }}-CHANGELOG.txt
+        echo "- \`SimpleTwitchEmoteSounds.exe\` (Windows binary): \`$(sha256sum ./publish_win-x64-portable/SimpleTwitchEmoteSounds.exe | awk '{print $1}')\`" >> ${{ github.workspace }}-CHANGELOG.txt
+        echo "- \`SimpleTwitchEmoteSounds_installer.exe\` (Windows installer binary): \`$(sha256sum ./publish_win-x64-installed/SimpleTwitchEmoteSounds_installer.exe | awk '{print $1}')\`" >> ${{ github.workspace }}-CHANGELOG.txt
     - name: Release
       uses: softprops/action-gh-release@v2
       with:

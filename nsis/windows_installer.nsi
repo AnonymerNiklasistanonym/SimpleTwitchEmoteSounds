@@ -216,6 +216,9 @@ Function .onInstSuccess
 
   ;Do nothing
 
+  ;Open the settings directory
+  ;ExecShell "open" "$INSTDIR\Settings"
+
 FunctionEnd
 
 ;--------------------------------
