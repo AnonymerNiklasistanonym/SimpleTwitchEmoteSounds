@@ -10,7 +10,7 @@ on:
   push:
     branches:
       - master
-      - feature-windows-installer-nsis 
+      - feature-windows-installer-nsis
   # Run CI on pull requests to any branch
   pull_request:
   # Run CI on manual request
@@ -21,9 +21,11 @@ jobs:
     strategy:
         matrix:
           os: [ubuntu-latest,windows-latest]
+          portable: [true, false]
     runs-on: ${{ matrix.os }}
     env:
       Project_Path: SimpleTwitchEmoteSounds/SimpleTwitchEmoteSounds.csproj
+      Output_Path: publish
       Dotnet_Publish_Runtime: ${{ startsWith(matrix.os, 'windows') && 'win' || 'linux' }}-x64
     steps:
       - name: Checkout Repository
@@ -34,14 +36,23 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Publish Application
-        run: dotnet publish ${{ env.Project_Path }} -c Release -o ./publish -r ${{ env.Dotnet_Publish_Runtime }} -p:PublishSingleFile=true -p:DebugType=none -p:PublishReadyToRun=false -p:IncludeNativeLibrariesForSelfExtract=true --self-contained false
+      - name: Publish Application (${{ matrix.portable && 'portable' || 'installed' }})
+        run: dotnet publish ${{ env.Project_Path }} -o ${{ env.Output_Path }} -r ${{ env.Dotnet_Publish_Runtime }} ${{ env.Dotnet_Publish_Options }} ${{ env.Dotnet_Publish_Options_DefineConstants }}
+        env:
+          Dotnet_Publish_Options: -c Release -p:PublishSingleFile=true -p:DebugType=none -p:PublishReadyToRun=false -p:IncludeNativeLibrariesForSelfExtract=true --self-contained false
+          Dotnet_Publish_Options_DefineConstants: ${{ matrix.portable == false && '-p:DefineConstants="CUSTOM_FEATURE_INSTALLED"' || '' }}
+
+      # makensis is installed per default on windows-latest GitHub Action runners
+      - name: Create NSIS Installer
+        if: startsWith(matrix.os, 'windows') && matrix.portable == false
+        run: makensis windows_installer.nsi
+        working-directory: nsis
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SimpleTwitchEmoteSounds-${{ env.Dotnet_Publish_Runtime }}
-          path: ./publish
+          name: SimpleTwitchEmoteSounds-${{ env.Dotnet_Publish_Runtime }}-${{ matrix.portable && 'portable' || 'installed' }}
+          path: ${{ env.Output_Path }}
   create-github-release:
     strategy:
       matrix:
@@ -54,22 +65,31 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
-    - name: Download build step artifact linux-x64
+    - name: Download build step artifact linux-x64 (portable)
       uses: actions/download-artifact@v4
       with:
-        name: SimpleTwitchEmoteSounds-linux-x64
-        path: publish_linux-x64
-    # -> publish_linux-x64
+        name: SimpleTwitchEmoteSounds-linux-x64-portable
+        path: publish_linux-x64-portable
+    # -> publish_linux-x64-portable
     #    |
     #    +- SimpleTwitchEmoteSounds
-    - name: Download build step artifact win-x64
+    - name: Download build step artifact win-x64 (portable)
       uses: actions/download-artifact@v4
       with:
-        name: SimpleTwitchEmoteSounds-win-x64
-        path: publish_win-x64
-    # -> publish_win-x64
+        name: SimpleTwitchEmoteSounds-win-x64-portable
+        path: publish_win-x64-portable
+    # -> publish_win-x64-portable
     #    |
     #    +- SimpleTwitchEmoteSounds.exe
+    - name: Download build step artifact win-x64 (installed)
+      uses: actions/download-artifact@v4
+      with:
+        name: SimpleTwitchEmoteSounds-win-x64-installed
+        path: publish_win-x64-installed
+    # -> publish_win-x64-installed
+    #    |
+    #    +- SimpleTwitchEmoteSounds.exe
+    #    +- SimpleTwitchEmoteSounds_installer.exe
     - name: Generate Changelog
       run: |
         echo "Linux and Windows binary require the [.NET runtime](https://dotnet.microsoft.com/en-us/download) to run." > ${{ github.workspace }}-CHANGELOG.txt
@@ -85,5 +105,6 @@ jobs:
         body_path: ${{ github.workspace }}-CHANGELOG.txt
         generate_release_notes: true
         files: |
-          ./publish_linux-x64/SimpleTwitchEmoteSounds
-          ./publish_win-x64/SimpleTwitchEmoteSounds.exe
+          ./publish_linux-x64-portable/SimpleTwitchEmoteSounds
+          ./publish_win-x64-portable/SimpleTwitchEmoteSounds.exe
+          ./publish_win-x64-installed/SimpleTwitchEmoteSounds_installer.exe
