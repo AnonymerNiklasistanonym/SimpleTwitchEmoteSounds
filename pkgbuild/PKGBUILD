@@ -23,7 +23,7 @@ makedepends=('dotnet-sdk')
 source=("$_reponame-$pkgver.tar.gz::$url/archive/refs/tags/v$_pkgver.tar.gz")
 provides=("${pkgname}")
 conflicts=("${pkgname}")
-sha256sums=('32dedd9f814b275d69811487b5059a85c84c63199cdb7855ee53eee0684f4d97')
+sha256sums=('SKIP')
 # (2) Use the git repository (BRANCH) as source
 #source=("git+$url.git#branch=master")
 #provides=("${pkgname%-git}")
@@ -61,7 +61,8 @@ build() {
     -p:DebugType=none \
     -p:PublishReadyToRun=false \
     -p:IncludeNativeLibrariesForSelfExtract=true \
-    --self-contained false
+    --self-contained false \
+    -p:DefineConstants="CUSTOM_FEATURE_INSTALLED"
 }
 
 package() {
