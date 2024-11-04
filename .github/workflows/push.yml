@@ -65,10 +65,21 @@ jobs:
     # -> publish_win-x64
     #    |
     #    +- SimpleTwitchEmoteSounds.exe
+    - name: Generate Changelog
+      run: |
+        echo "automatic generated changelog:" > ${{ github.workspace }}-CHANGELOG.txt
+        echo "" > ${{ github.workspace }}-CHANGELOG.txt
+        git archive --format=zip -o 'Source Code.zip' HEAD
+        git archive --format=tar.gz -o 'Source Code.tar.gz' HEAD
+        echo "- Source Code (zip): \`$(sha256sum 'Source Code.zip' | awk '{print $1}')\`" >> ${{ github.workspace }}-CHANGELOG.txt
+        echo "- Source Code (tar.gz): \`$(sha256sum 'Source Code.tar.gz' | awk '{print $1}')\`" >> ${{ github.workspace }}-CHANGELOG.txt
+        echo "- \`SimpleTwitchEmoteSounds\` (Linux binary): \`$(sha256sum ./publish_linux-x64/SimpleTwitchEmoteSounds | awk '{print $1}')\`" >> ${{ github.workspace }}-CHANGELOG.txt
+        echo "- \`SimpleTwitchEmoteSounds.exe\` (Windows binary): \`$(sha256sum ./publish_win-x64/SimpleTwitchEmoteSounds.exe | awk '{print $1}')\`" >> ${{ github.workspace }}-CHANGELOG.txt
     - name: Release
       uses: softprops/action-gh-release@v2
       with:
+        body_path: ${{ github.workspace }}-CHANGELOG.txt
+        generate_release_notes: true
         files: |
           ./publish_linux-x64/SimpleTwitchEmoteSounds
           ./publish_win-x64/SimpleTwitchEmoteSounds.exe
-          ./pkgbuild/PKGBUILD
