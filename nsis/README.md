@@ -16,18 +16,23 @@
   - List uninstall option to installed application
   - Recognize existing previous installations and automatically uninstall them before installing the current (new) version
 - Optionally adds a binary executable desktop shortcut if user checks box
+- After a successful install it starts the program automatically
 
 ## Setup
 
 1. Install [NSIS](https://nsis.sourceforge.io/Download) (e.g. `winget install -e --id NSIS.NSIS`)
-2. Add `makensis` to the terminal by adding TODO to the environment PATH variable
+2. Enable the command `makensis` in the terminal by adding `C:\Program Files (x86)\NSIS\Bin` to the user environment `PATH` variable or using the full path
 
 ## Build
 
 > [!IMPORTANT]
-> This installer requires a built version of the program binary: `./publish/SimpleTwitchEmoteSounds.exe`
+> This installer requires a built version of the program binary: `../publish/SimpleTwitchEmoteSounds.exe`
 
-```sh
-# This creates ./publish/SimpleTwitchEmoteSounds_installer.exe
+```ps1
+# This creates ../publish/SimpleTwitchEmoteSounds.exe
+dotnet publish ../SimpleTwitchEmoteSounds/SimpleTwitchEmoteSounds.csproj -o ../publish -r win-x64 -c Release -p:PublishSingleFile=true -p:DebugType=none -p:PublishReadyToRun=false -p:IncludeNativeLibrariesForSelfExtract=true --self-contained false -p:DefineConstants="CUSTOM_FEATURE_INSTALLED"
+# This creates ../publish/SimpleTwitchEmoteSounds_installer.exe
+& "C:\Program Files (x86)\NSIS\Bin\makensis" windows_installer.nsi
+# Alternative if makensis is found in the PATH:
 makensis windows_installer.nsi
 ```
