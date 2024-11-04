@@ -36,10 +36,10 @@
   !define INSTDIR_BIN "bin"
 
   ;Overwrite $InstallDir value when a previous installation directory was found
-  InstallDirRegKey HKLM "Software\${PRODUCT}" ""
+  InstallDirRegKey HKCU "Software\${PRODUCT}" ""
 
-  ;Request admin prvilidges to install to the program files directory
-  RequestExecutionLevel admin
+  ;Set execution level to 'user' to avoid requiring admin privileges
+  RequestExecutionLevel user
 
 ;--------------------------------
 ;Interface Settings
@@ -107,13 +107,11 @@
 ;Before Installer Section
 
 Function .onInit
-
-  ;Get the uninstall information and the name (and thus also the version) of the
-  ;previous installation
-  ReadRegStr $0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "UninstallString"
-  ReadRegStr $1 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayName"
   ;If a previous installation was found ask the user via a popup if they want to
   ;uninstall it before running the installer
+  ; Get uninstall information from HKCU instead of HKLM
+  ReadRegStr $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "UninstallString"
+  ReadRegStr $1 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayName"
   ${If} $0 != ""
   ${AndIf} ${Cmd} `MessageBox MB_YESNO|MB_ICONQUESTION "$(LangStrUninstallTheCurrentlyInstalled1)$1$(LangStrUninstallTheCurrentlyInstalled2)${PRODUCT_DISPLAY_NAME} ${PRODUCT_VERSION}$(LangStrUninstallTheCurrentlyInstalled3)" /SD IDYES IDYES`
     ;Use the included macro to uninstall the existing installation if the user
@@ -152,24 +150,22 @@ Section "${PRODUCT_DISPLAY_NAME} ($(LangStrRequired))" Section1
   File "..\publish\${PRODUCT}.exe"
   SetOutPath "$INSTDIR"
 
-  ;Store installation folder in registry for future installs
-  WriteRegStr HKLM "Software\${PRODUCT}" "" "$INSTDIR"
+  ;Store installation folder in registry for future installs under HKCU
+  WriteRegStr HKCU "Software\${PRODUCT}" "" "$INSTDIR"
 
-  ;Registry information for add/remove programs
-  ;(https://nsis.sourceforge.io/Add_uninstall_information_to_Add/Remove_Programs)
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayName" "${PRODUCT_DISPLAY_NAME} ${PRODUCT_VERSION}"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "UninstallString" "$\"$INSTDIR\${PRODUCT}_uninstaller.exe$\""
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "QuietUninstallString" "$\"$INSTDIR\${PRODUCT}_uninstaller.exe$\" /S"
-
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "URLInfoAbout" "$\"${PRODUCT_URL}$\""
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "NoModify" 1
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "NoRepair" 1
+  ;Register the application in Add/Remove Programs under HKCU
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayName" "${PRODUCT_DISPLAY_NAME} ${PRODUCT_VERSION}"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "UninstallString" "$\"$INSTDIR\${PRODUCT}_uninstaller.exe$\""
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "QuietUninstallString" "$\"$INSTDIR\${PRODUCT}_uninstaller.exe$\" /S"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "URLInfoAbout" "$\"${PRODUCT_URL}$\""
+  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "NoModify" 1
+  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "NoRepair" 1
 
   ;Create default settings directory
   CreateDirectory "$AppData\${PRODUCT}"
   CreateDirectory "$AppData\${PRODUCT}\Settings"
 
-  ;Create start menu shortcut for program, settings directory and uninstaller
+  ;Create start menu shortcut for program, settings directory, and uninstaller
   CreateDirectory "$SMPROGRAMS\${PRODUCT}"
   CreateShortCut "$SMPROGRAMS\${PRODUCT}\${PRODUCT_DISPLAY_NAME} ${PRODUCT_VERSION}.lnk" "$INSTDIR\${INSTDIR_BIN}\${PRODUCT}.exe" "" "$INSTDIR\${PRODUCT}.ico" 0
   CreateShortCut "$SMPROGRAMS\${PRODUCT}\${PRODUCT_DISPLAY_NAME} $(LangStrSettings).lnk" "$AppData\${PRODUCT}\Settings"
@@ -188,8 +184,8 @@ Section "Uninstall"
   DetailPrint "$(LangStrUninstall) ${PRODUCT_DISPLAY_NAME} ${PRODUCT_VERSION}"
 
   ;Remove registry keys
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}"
-  DeleteRegKey HKLM "Software\${PRODUCT}"
+  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}"
+  DeleteRegKey HKCU "Software\${PRODUCT}"
 
   ;Remove the installation directory and all files within it
   RMDir /r "$INSTDIR\${INSTDIR_BIN}\*.*"
