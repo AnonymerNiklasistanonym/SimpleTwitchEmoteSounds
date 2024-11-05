@@ -119,8 +119,9 @@ Function .onInit
   ; Get uninstall information from HKCU instead of HKLM
   ReadRegStr $0 HKCU "${REG_KEY_UNINSTALL_INFO}" "UninstallString"
   ReadRegStr $1 HKCU "${REG_KEY_UNINSTALL_INFO}" "DisplayName"
+  ReadRegStr $2 HKCU "${REG_KEY_UNINSTALL_INFO}" "DisplayVersion"
   ${If} $0 != ""
-  ${AndIf} ${Cmd} `MessageBox MB_YESNO|MB_ICONQUESTION "$(LangStrUninstallTheCurrentlyInstalled1)$1$(LangStrUninstallTheCurrentlyInstalled2)${PRODUCT_DISPLAY_NAME} ${PRODUCT_VERSION}$(LangStrUninstallTheCurrentlyInstalled3)" /SD IDYES IDYES`
+  ${AndIf} ${Cmd} `MessageBox MB_YESNO|MB_ICONQUESTION "$(LangStrUninstallTheCurrentlyInstalled1)$1 $2$(LangStrUninstallTheCurrentlyInstalled2)${PRODUCT_DISPLAY_NAME} ${PRODUCT_VERSION}$(LangStrUninstallTheCurrentlyInstalled3)" /SD IDYES IDYES`
     ;Use the included macro to uninstall the existing installation if the user
     ;selected yes
     !insertmacro UninstallExisting $0 $0
