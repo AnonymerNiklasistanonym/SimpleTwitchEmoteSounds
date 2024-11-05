@@ -40,7 +40,6 @@ jobs:
         run: dotnet publish ${{ env.Project_Path }} -o ${{ env.Output_Path }} -r ${{ env.Dotnet_Publish_Runtime }} ${{ env.Dotnet_Publish_Options }} ${{ env.Dotnet_Publish_Options_DefineConstants }}
         env:
           Dotnet_Publish_Options: -c Release -p:PublishSingleFile=true -p:DebugType=none -p:PublishReadyToRun=false -p:IncludeNativeLibrariesForSelfExtract=true --self-contained false
-          # Constants with which the non portable install release is compiled
           Dotnet_Publish_Options_DefineConstants: ${{ matrix.portable == false && '-p:DefineConstants="CUSTOM_FEATURE_INSTALLED"' || '' }}
 
       # makensis is installed per default on windows-latest GitHub Action runners

@@ -35,15 +35,23 @@
   ;Set separate installation directory for binary files (PATH bin directory)
   !define INSTDIR_BIN "bin"
 
-  ;Set separate data directory for settings
+  ;Set separate data directories
   !define DATADIR_SETTINGS "Settings"
+  !define DATADIR_LOGS "Logs"
+
+  ;Set registry keys
+  !define REG_KEY_INSTALL_DIR "Software\${PRODUCT}"
+  !define REG_KEY_UNINSTALL_INFO "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}"
+
+  ;Set the estimated install size
+  Var /GLOBAL ESTIMATED_INSTALL_SIZE_IN_KB
 
   ;Overwrite $InstallDir value when a previous installation directory was found
-  InstallDirRegKey HKCU "Software\${PRODUCT}" ""
+  InstallDirRegKey HKCU "${REG_KEY_INSTALL_DIR}" ""
 
   ;Set execution level to 'user' to avoid requiring admin
-  RequestExecutionLevel user
   ;This means that the install dir cannot be the program files directory!
+  RequestExecutionLevel user
 
 ;--------------------------------
 ;Interface Settings
@@ -109,20 +117,15 @@ Function .onInit
   ;If a previous installation was found ask the user via a popup if they want to
   ;uninstall it before running the installer
   ; Get uninstall information from HKCU instead of HKLM
-  ReadRegStr $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "UninstallString"
-  ReadRegStr $1 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayName"
+  ReadRegStr $0 HKCU "${REG_KEY_UNINSTALL_INFO}" "UninstallString"
+  ReadRegStr $1 HKCU "${REG_KEY_UNINSTALL_INFO}" "DisplayName"
   ${If} $0 != ""
   ${AndIf} ${Cmd} `MessageBox MB_YESNO|MB_ICONQUESTION "$(LangStrUninstallTheCurrentlyInstalled1)$1$(LangStrUninstallTheCurrentlyInstalled2)${PRODUCT_DISPLAY_NAME} ${PRODUCT_VERSION}$(LangStrUninstallTheCurrentlyInstalled3)" /SD IDYES IDYES`
     ;Use the included macro to uninstall the existing installation if the user
     ;selected yes
     !insertmacro UninstallExisting $0 $0
-    ;If the uninstall failed show an additional popup window asking if the
-    ;installation should be aborted or not
-    ${If} $0 <> 0
-      MessageBox MB_YESNO|MB_ICONSTOP "$(LangStrFailedToUninstallContinue)" /SD IDYES IDYES +2
         Abort
     ${EndIf}
-  ${EndIf}
 
 FunctionEnd
 
@@ -142,25 +145,25 @@ Section "${PRODUCT_DISPLAY_NAME} ($(LangStrRequired))" Section1
   ;Icon for shortcuts
   File "/oname=${PRODUCT}.ico" "..\${PRODUCT}\Assets\cow.ico"
   ;Separate installation directory for binary files (PATH bin directory)
-  CreateDirectory "$INSTDIR\${INSTDIR_BIN}"
-  ;Binary executable of program
   SetOutPath "$INSTDIR\${INSTDIR_BIN}"
+  ;Binary executable of program
   File "..\publish\${PRODUCT}.exe"
-  SetOutPath "$INSTDIR"
+  StrCpy $ESTIMATED_INSTALL_SIZE_IN_KB / 32011
 
   ;Store installation folder in registry for future installs under HKCU
-  WriteRegStr HKCU "Software\${PRODUCT}" "" "$INSTDIR"
+  WriteRegStr   HKCU "${REG_KEY_INSTALL_DIR}" "" "$INSTDIR"
 
   ;Register the application in Add/Remove Programs under HKCU
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayName" "${PRODUCT_DISPLAY_NAME}"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayVersion" "${PRODUCT_VERSION}"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayIcon" "$INSTDIR\${PRODUCT}.ico"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "Publisher" "${PRODUCT_PUBLISHER}"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "UninstallString" "$\"$INSTDIR\${PRODUCT}_uninstaller.exe$\""
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "QuietUninstallString" "$\"$INSTDIR\${PRODUCT}_uninstaller.exe$\" /S"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "URLInfoAbout" "${PRODUCT_URL}"
-  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "NoModify" 1
-  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "NoRepair" 1
+  WriteRegStr   HKCU "${REG_KEY_UNINSTALL_INFO}" "DisplayName"          "${PRODUCT_DISPLAY_NAME}"
+  WriteRegStr   HKCU "${REG_KEY_UNINSTALL_INFO}" "DisplayVersion"       "${PRODUCT_VERSION}"
+  WriteRegStr   HKCU "${REG_KEY_UNINSTALL_INFO}" "DisplayIcon"          "$INSTDIR\${PRODUCT}.ico"
+  WriteRegStr   HKCU "${REG_KEY_UNINSTALL_INFO}" "Publisher"            "${PRODUCT_PUBLISHER}"
+  WriteRegStr   HKCU "${REG_KEY_UNINSTALL_INFO}" "URLInfoAbout"         "${PRODUCT_URL}"
+  WriteRegStr   HKCU "${REG_KEY_UNINSTALL_INFO}" "UninstallString"      "$\"$INSTDIR\${PRODUCT}_uninstaller.exe$\""
+  WriteRegStr   HKCU "${REG_KEY_UNINSTALL_INFO}" "QuietUninstallString" "$\"$INSTDIR\${PRODUCT}_uninstaller.exe$\" /S"
+  WriteRegDWORD HKCU "${REG_KEY_UNINSTALL_INFO}" "NoModify"             1
+  WriteRegDWORD HKCU "${REG_KEY_UNINSTALL_INFO}" "NoRepair"             1
+  WriteRegDWORD HKCU "${REG_KEY_UNINSTALL_INFO}" "EstimatedSize"        $ESTIMATED_INSTALL_SIZE_IN_KB
 
   ;Create default settings directory
   CreateDirectory "$APPDATA\${PRODUCT}"
@@ -168,12 +171,12 @@ Section "${PRODUCT_DISPLAY_NAME} ($(LangStrRequired))" Section1
 
   ;Create start menu shortcut for program, settings directory, and uninstaller
   CreateDirectory "$SMPROGRAMS\${PRODUCT}"
-  CreateShortCut "$SMPROGRAMS\${PRODUCT}\${PRODUCT_DISPLAY_NAME}.lnk" "$INSTDIR\${INSTDIR_BIN}\${PRODUCT}.exe" "" "$INSTDIR\${PRODUCT}.ico" 0
-  CreateShortCut "$SMPROGRAMS\${PRODUCT}\${PRODUCT_DISPLAY_NAME} $(LangStrSettings).lnk" "$APPDATA\${PRODUCT}\${DATADIR_SETTINGS}"
-  CreateShortCut "$SMPROGRAMS\${PRODUCT}\$(LangStrUninstall) ${PRODUCT_DISPLAY_NAME}.lnk" "$INSTDIR\${PRODUCT}_uninstaller.exe" "" "$INSTDIR\${PRODUCT}_uninstaller.exe" 0
+  CreateShortCut  "$SMPROGRAMS\${PRODUCT}\${PRODUCT_DISPLAY_NAME}.lnk"                     "$INSTDIR\${INSTDIR_BIN}\${PRODUCT}.exe" "" "$INSTDIR\${PRODUCT}.ico" 0
+  CreateShortCut  "$SMPROGRAMS\${PRODUCT}\${PRODUCT_DISPLAY_NAME} $(LangStrSettings).lnk"  "$APPDATA\${PRODUCT}\${DATADIR_SETTINGS}"
+  CreateShortCut  "$SMPROGRAMS\${PRODUCT}\$(LangStrUninstall) ${PRODUCT_DISPLAY_NAME}.lnk" "$INSTDIR\${PRODUCT}_uninstaller.exe" "" "$INSTDIR\${PRODUCT}_uninstaller.exe" 0
 
   ;Create uninstaller
-  WriteUninstaller "${PRODUCT}_uninstaller.exe"
+  WriteUninstaller "$INSTDIR\${PRODUCT}_uninstaller.exe"
 
 SectionEnd
 
@@ -185,30 +188,32 @@ Section "Uninstall"
   DetailPrint "$(LangStrUninstall) ${PRODUCT_DISPLAY_NAME} ${PRODUCT_VERSION}"
 
   ;Remove registry keys
-  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}"
-  DeleteRegKey HKCU "Software\${PRODUCT}"
+  DeleteRegKey HKCU "${REG_KEY_UNINSTALL_INFO}"
+  DeleteRegKey HKCU "${REG_KEY_INSTALL_DIR}"
 
   ;Remove the installation directory and all files within it
-  RMDir /r "$INSTDIR\${INSTDIR_BIN}\*.*"
-  RMDir "$INSTDIR\${INSTDIR_BIN}"
-  RMDir /r "$INSTDIR\*.*"
-  RMDir "$INSTDIR"
+  RMDir /r "$INSTDIR\${INSTDIR_BIN}"
+  RMDir /r "$INSTDIR"
 
   ;Remove the start menu directory and all shortcuts within it
   Delete "$SMPROGRAMS\${PRODUCT}\*.*"
   RmDir  "$SMPROGRAMS\${PRODUCT}"
 
-  ;Confirm whether to delete the settings directory
-  MessageBox MB_YESNO|MB_ICONQUESTION "$(LangStrRemoveSettings)" IDYES +2
-  Goto skip_delete_settings_directory
+  ${If} ${Silent}
+    ;In silent mode do not ask for removal of settings directory
+    ;Reasoning: Upgrading takes one less click
+  ${Else}
+    ;Confirm whether to delete the settings directory
+    MessageBox MB_YESNO|MB_ICONQUESTION "$(LangStrRemoveSettings)" IDYES +2
+    Goto skip_delete_settings_directory
 
-  ;Remove the settings directory and its contents
-  RMDir /r "$APPDATA\${PRODUCT}\${DATADIR_SETTINGS}\*.*"
-  RMDir "$APPDATA\${PRODUCT}\${DATADIR_SETTINGS}"
-  RMDir /r "$APPDATA\${PRODUCT}\*.*"
-  RMDir "$APPDATA\${PRODUCT}"
+    ;Remove the settings directory and all files within it
+    RMDir /r "$APPDATA\${PRODUCT}\${DATADIR_SETTINGS}"
+    RMDir /r "$APPDATA\${PRODUCT}\${DATADIR_LOGS}"
+    RMDir /r "$APPDATA\${PRODUCT}"
 
-  skip_delete_settings_directory:
+    skip_delete_settings_directory:
+  ${EndIf}
 
 SectionEnd
 
@@ -226,10 +231,6 @@ FunctionEnd
 ;Custom Function To Create A Desktop Shortcut
 
 Function createDesktopShortcut
-
-  ;Reset output file path to installation directory because CreateShortCut needs
-  ;that information (https://nsis-dev.github.io/NSIS-Forums/html/t-299421.html)
-  SetOutPath "$INSTDIR\${INSTDIR_BIN}"
 
   ;Create Desktop shortcut to main component
   CreateShortCut "$DESKTOP\${PRODUCT_DISPLAY_NAME}.lnk" "$INSTDIR\${INSTDIR_BIN}\${PRODUCT}.exe" "" "$INSTDIR\${PRODUCT}.ico" 0
