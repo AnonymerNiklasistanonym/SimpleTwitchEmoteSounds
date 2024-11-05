@@ -36,3 +36,10 @@ dotnet publish ../SimpleTwitchEmoteSounds/SimpleTwitchEmoteSounds.csproj -o ../p
 # Alternative if makensis is found in the PATH:
 makensis windows_installer.nsi
 ```
+
+## Registry Keys
+
+To check the added/removed registry entries open the `Registry Editor` (`regedit.exe`) and search for:
+
+- Install directory: `Computer\HKEY_CURRENT_USER\Software\SimpleTwitchEmoteSounds`
+- (Un)Install information: `Computer\HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Uninstall\SimpleTwitchEmoteSounds`
