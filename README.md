@@ -35,6 +35,14 @@ mainstream options like MixItUp and Streamer.bot.
 > git merge upstream/master
 > ```
 >
+> **Create patch branch:**
+>
+> ```sh
+> git fetch upstream
+> git checkout -b patch-NAME upstream/master
+> git push -u origin patch-NAME
+> ```
+>
 > **TODO**:
 >
 > [ ] Rewrite the commits to separate patches that can easily be merged/edited
