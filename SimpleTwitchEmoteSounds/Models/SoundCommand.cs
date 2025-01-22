@@ -2,7 +2,10 @@
 using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json;
+using Serilog;
+using SimpleTwitchEmoteSounds.Services;
 
 namespace SimpleTwitchEmoteSounds.Models;
 
@@ -16,9 +19,12 @@ public partial class SoundCommand : ObservableObject
     [ObservableProperty] private float? _playChance = 1;
     [ObservableProperty] private MatchType _selectedMatchType = MatchType.StartsWith;
     [ObservableProperty] private float? _volume = 0.5f;
+    [ObservableProperty] private int _timesPlayed;
     [JsonIgnore] public string DisplayName => Category == string.Empty ? $"{Name}" : $"({Category}) {Name}";
     [JsonIgnore] public ObservableCollection<MatchType> MatchTypes => new(Enum.GetValues<MatchType>());
     [JsonIgnore] public string[] Names => Name.Split(',').Select(n => n.Trim()).ToArray();
+    [JsonIgnore]
+    public bool IsMissingSoundFiles => SoundFiles.Any(soundFile => !AudioService.DoesSoundExist(soundFile));
 
     partial void OnVolumeChanged(float? value)
     {
@@ -45,6 +51,16 @@ public partial class SoundCommand : ObservableObject
             OnPropertyChanged(nameof(Names));
             OnPropertyChanged(nameof(DisplayName));
         }
+    }
+
+    public void IncrementTimesPlayed()
+    {
+        TimesPlayed++;
+    }
+
+    public void RefreshStats()
+    {
+        TimesPlayed = 0;
     }
 }
 
