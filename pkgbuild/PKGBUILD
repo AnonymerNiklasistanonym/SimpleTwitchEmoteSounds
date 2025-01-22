@@ -9,7 +9,7 @@ _reponame=SimpleTwitchEmoteSounds
 _binname="$_reponame"
 _displayname='Simple Twitch Emote Sounds'
 # Will be updated when using (2)
-pkgver=1.2.1
+pkgver=1.3.0
 _pkgver="$pkgver-linux"
 pkgrel=1
 pkgdesc='Simple sound trigger for Twitch emotes for a Twitch channel'

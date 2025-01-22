@@ -7,18 +7,38 @@ mainstream options like MixItUp and Streamer.bot.
 > [!NOTE]
 > This fork contains patches to:
 >
-> - Run this program natively on Linux
-> - Make configurations to floats (numbers) instead of strings that need to be parsed
-> - Add an AUR configuration to easily install it on Arch Linux derivatives using the native package manager
-> - A GitHub Workflow (CI/CD) that automatically creates a binary for Windows and Linux
+> - Run this program natively on Linux (default audio API  `NAudio` is not available on Linux)
+> - Make configurations numbers to numbers instead of strings that need to be parsed (and can be parsed differently depending on the locale)
+> - Add a `pacman` `PKGBUILD` file to easily install it on Arch Linux derivatives using the native package manager
+> - A GitHub Workflow (CI/CD) that automatically creates the binary for Windows and Linux
 >
-> Run the program using the command `dotnet run --project SimpleTwitchEmoteSounds`.
-> Build a single program binary to the directory `publish` using the command `dotnet publish SimpleTwitchEmoteSounds -o publish -c Release -p:PublishSingleFile=true -p:DebugType=none -p:PublishReadyToRun=false -p:IncludeNativeLibrariesForSelfExtract=true --self-contained false`.
+> **Run**:
+>
+> ```sh
+> dotnet run --project SimpleTwitchEmoteSounds
+> ```
+>
+> **Build**:
+>
+> Build a single program binary to the directory `publish` using:
+>
+> ```sh
+> dotnet publish SimpleTwitchEmoteSounds -o publish -c Release -p:PublishSingleFile=true -p:DebugType=none -p:PublishReadyToRun=false -p:IncludeNativeLibrariesForSelfExtract=true --self-contained false`.
+> ```
+>
+> [**Update fork:**](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/syncing-a-fork)
+>
+> ```sh
+> git fetch upstream
+> git checkout master
+> # Make sure there are no open changes, then merge upstream into it
+> git merge upstream/master
+> ```
 >
 > **TODO**:
 >
 > [ ] Rewrite the commits to separate patches that can easily be merged/edited
-> [ ] Add an AUR configuration based on the current repository state
+> [ ] Add a `pacman` `PKGBUILD` file for the current local repository
 
 - [📝 FAQ](#-faq)
     - [🤔 What is an Emote Sound?](#-what-is-an-emote-sound)
