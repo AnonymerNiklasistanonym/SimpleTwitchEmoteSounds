@@ -45,8 +45,7 @@ mainstream options like MixItUp and Streamer.bot.
 >
 > **TODO**:
 >
-> [ ] Rewrite the commits to separate patches that can easily be merged/edited
-> [ ] Add a `pacman` `PKGBUILD` file for the current local repository
+> - [ ] Rewrite the changes to separate patches that can easily be merged/edited
 
 - [📝 FAQ](#-faq)
     - [🤔 What is an Emote Sound?](#-what-is-an-emote-sound)
