@@ -125,7 +125,7 @@ public partial class DashboardViewModel : ViewModelBase
                 {
                     FileName = f.Name,
                     FilePath = f.Path.LocalPath,
-                    Percentage = "1"
+                    Percentage = 1
                 });
             }
 
@@ -272,7 +272,7 @@ public partial class DashboardViewModel : ViewModelBase
                 continue;
             }
 
-            var shouldPlay = ShouldPlaySound(float.Parse(soundCommand.PlayChance));
+            var shouldPlay = ShouldPlaySound(soundCommand.PlayChance ?? 1);
             Log.Debug(
                 $"Command '{soundCommand.Name}' matched. Play chance: {soundCommand.PlayChance}%. Should play: {shouldPlay}");
 
