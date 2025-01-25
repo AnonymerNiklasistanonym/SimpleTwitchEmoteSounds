@@ -16,9 +16,9 @@ public partial class SoundCommand : ObservableObject
     [ObservableProperty] private ObservableCollection<SoundFile> _soundFiles = [];
     [ObservableProperty] private bool _enabled = true;
     [ObservableProperty] private bool _isExpanded = true;
-    [ObservableProperty] private string _playChance = "1";
+    [ObservableProperty] private float? _playChance = 1;
     [ObservableProperty] private MatchType _selectedMatchType = MatchType.StartsWith;
-    [ObservableProperty] private string _volume = "1";
+    [ObservableProperty] private float? _volume = 0.5f;
     [ObservableProperty] private int _timesPlayed;
     [JsonIgnore] public string DisplayName => Category == string.Empty ? $"{Name}" : $"({Category}) {Name}";
     [JsonIgnore] public ObservableCollection<MatchType> MatchTypes => new(Enum.GetValues<MatchType>());
@@ -26,6 +26,22 @@ public partial class SoundCommand : ObservableObject
 
     [JsonIgnore]
     public bool IsMissingSoundFiles => SoundFiles.Any(soundFile => !AudioService.DoesSoundExist(soundFile));
+
+    partial void OnVolumeChanged(float? value)
+    {
+        if (value == null)
+        {
+            Volume = 0.5f;
+        }
+    }
+
+    partial void OnPlayChanceChanged(float? value)
+    {
+        if (value == null)
+        {
+            PlayChance = 1;
+        }
+    }
 
     public string Name
     {
