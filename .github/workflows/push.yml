@@ -64,9 +64,15 @@ jobs:
     # This downloads all build steps artifacts into the directory 'artifacts':
     # - publish_win-x64/SimpleTwitchEmoteSounds.exe
     # - ...
+    - name: Generate Changelog
+      run: |
+        echo "Linux and Windows binary require the [.NET runtime](https://dotnet.microsoft.com/en-us/download) to run." > ${{ github.workspace }}-CHANGELOG.txt
+        echo "Linux requires the binary to be marked as executable (\`chmod +x SimpleTwitchEmoteSounds\`)." >> ${{ github.workspace }}-CHANGELOG.txt
     - name: Release
       uses: softprops/action-gh-release@v2
       with:
+        body_path: ${{ github.workspace }}-CHANGELOG.txt
+        generate_release_notes: true
         files: ./artifacts/**/*SimpleTwitchEmoteSounds*
     # This creates a release for the current (new) version tag that includes:
     # - all SimpleTwitchEmoteSounds.exe files from the artifacts directory
