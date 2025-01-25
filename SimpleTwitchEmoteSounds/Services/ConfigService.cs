@@ -73,17 +73,28 @@ public static class ConfigService
         var settingsFolder = Path.Combine(appLocation, "Settings");
         var configFilePath = Path.Combine(settingsFolder, $"{name}.json");
 
+        var defaultConfig = new T();
         if (!File.Exists(configFilePath))
         {
             Directory.CreateDirectory(settingsFolder);
-            var defaultConfig = new T();
-            var defaultConfigJson = JsonConvert.SerializeObject(defaultConfig, Options);
-            File.WriteAllText(configFilePath, defaultConfigJson);
+            SaveConfig(name, defaultConfig);
             return defaultConfig;
         }
 
-        var configJson = File.ReadAllText(configFilePath);
-        return JsonConvert.DeserializeObject<T>(configJson) ?? new T();
+        try {
+            var configJson = File.ReadAllText(configFilePath);
+            var config = JsonConvert.DeserializeObject<T>(configJson);
+            return config ?? defaultConfig;
+        }  catch (Exception e)
+        {
+            // If an error is found backup the file and load the default config instead of just plain crashing
+            Log.Error($"Error when trying to read configuration file: {e}");
+            var dateString = DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss");
+            var configFilePathBackup = Path.Combine(settingsFolder, $"{name}_backup_{dateString}.json");
+            File.Copy(configFilePath, configFilePathBackup);
+            SaveConfig(name, defaultConfig);
+            return defaultConfig;
+        }
     }
 
     private static void SaveConfig<T>(string name, T config) where T : class
