@@ -62,7 +62,7 @@ public partial class EditSoundCommandDialogViewModel(SoundCommand soundCommand) 
                 {
                     FileName = f.Name,
                     FilePath = f.Path.LocalPath,
-                    Percentage = "1"
+                    Percentage = 1
                 });
             }
         }
