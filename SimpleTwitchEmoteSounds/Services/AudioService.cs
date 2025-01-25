@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using Serilog;
+using System.Runtime.InteropServices;
 
 namespace SimpleTwitchEmoteSounds.Services;
 
@@ -64,7 +65,7 @@ public static class AudioService
         return null;
     }
 
-    private static async Task PlayAudioFile(string filePath, float volume)
+    private static async Task PlayAudioFileWindows(string filePath, float volume)
     {
         await using var audioFile = new AudioFileReader(filePath);
         using var outputDevice = new WaveOutEvent();
@@ -79,6 +80,20 @@ public static class AudioService
         while (outputDevice.PlaybackState == PlaybackState.Playing)
         {
             await Task.Delay(100);
+        }
+    }
+
+    private static async Task PlayAudioFile(string filePath, float volume)
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            Log.Information($"Platform Linux");
+            await AudioServiceLinux.PlayAudioFile(filePath, volume);
+        }
+        else
+        {
+            Log.Information($"Platform Windows");
+            await PlayAudioFileWindows(filePath, volume);
         }
     }
 
