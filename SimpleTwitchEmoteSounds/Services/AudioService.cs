@@ -31,7 +31,7 @@ public static class AudioService
         try
         {
             soundCommand.IncrementTimesPlayed();
-            await PlayAudioFile(selectedFile.FilePath, float.Parse(soundCommand.Volume));
+            await PlayAudioFile(selectedFile.FilePath, soundCommand.Volume ?? 0.5f);
         }
         catch (Exception ex)
         {
@@ -42,16 +42,16 @@ public static class AudioService
     private static SoundFile? SelectRandomSoundFile(SoundCommand soundCommand)
     {
         var random = new Random();
-        var totalProbability = soundCommand.SoundFiles.Sum(sf => float.Parse(sf.Percentage));
-        var randomValue = (float)(random.NextDouble() * totalProbability);
+        var totalProbability = soundCommand.SoundFiles.Sum(sf => sf.Percentage);
+        var randomValue = (float)(random.NextDouble() * (totalProbability ?? 1));
         var cumulativeProbability = 0f;
 
         Log.Debug($"Sound selection: Total probability: {totalProbability:F4}, Random value: {randomValue:F4}");
 
         foreach (var soundFile in soundCommand.SoundFiles)
         {
-            var probability = float.Parse(soundFile.Percentage);
-            cumulativeProbability += probability;
+            var probability = soundFile.Percentage;
+            cumulativeProbability += probability ?? 1;
 
             Log.Debug(
                 $"Checking sound file: {soundFile.FileName}, Probability: {probability:F4}, Cumulative: {cumulativeProbability:F4}");
