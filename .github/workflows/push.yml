@@ -64,6 +64,8 @@ jobs:
     # This downloads all build steps artifacts into the directory 'artifacts':
     # - publish_win-x64/SimpleTwitchEmoteSounds.exe
     # - ...
+    - name: List matched files
+      run: ls -1 ./artifacts/**/*SimpleTwitchEmoteSounds*
     - name: Release
       uses: softprops/action-gh-release@v2
       with:
