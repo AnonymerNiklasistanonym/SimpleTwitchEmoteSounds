@@ -57,7 +57,7 @@ mainstream options like MixItUp and Streamer.bot.
 > ```sh
 > git fetch upstream
 > git checkout patch-NAME
-> git rebase --onto NEW_TAG_NAME_OR_NEW_COMMIT OLD_BASE_TAG_OR_OLD_COMMIT
+> git rebase --onto NEW_BASE_TAG_OR_COMMIT OLD_BASE_TAG_OR_COMMIT
 > # e.g. git rebase --onto v1.3.1 v1.3.0
 > ```
 >
@@ -69,6 +69,26 @@ mainstream options like MixItUp and Streamer.bot.
 > git checkout patch-readme
 > cp merge.sh ../merge.sh
 > ../merge.sh
+> ```
+>
+> **Compare branches:**
+>
+> ```sh
+> # > All file changes
+> git diff REFERENCE_BRANCH NEW_BRANCH
+> # e.g. git diff patch-linux-audio upstream/master
+> # > Single file changes
+> git diff REFERENCE_BRANCH NEW_BRANCH -- filePath
+> # e.g. git diff upstream/master patch-linux-audio -- SimpleTwitchEmoteSounds/Services/AudioService.cs
+> ```
+>
+> **Copy commits to pull request / branch without creating automatic merge commits:**
+>
+> ```sh
+> # Copy a commit
+> git cherry-pick COMMIT_HASH
+> # Copy all commits of a branch (with changes that do not require any merge actions!)
+> git merge BRANCH_NAME --squash
 > ```
 
 - [📝 FAQ](#-faq)
