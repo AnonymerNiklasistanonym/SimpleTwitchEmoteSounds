@@ -1,0 +1,96 @@
+# (1) Use the git repository (VERSION TAG) as source
+pkgname=SimpleTwitchEmoteSounds
+# (2) Use the git repository (BRANCH) as source
+#pkgname=SimpleTwitchEmoteSounds-git
+# (3) Use the local directory as source
+#pkgname=SimpleTwitchEmoteSounds-local
+
+_reponame=SimpleTwitchEmoteSounds
+_binname="$_reponame"
+_displayname='Simple Twitch Emote Sounds'
+# Will be updated when using (2)
+pkgver=1.3.0
+_pkgver="$pkgver-linux"
+pkgrel=1
+pkgdesc='Simple sound trigger for Twitch emotes for a Twitch channel'
+arch=('any')
+url="https://github.com/AnonymerNiklasistanonym/$_reponame"
+license=('MIT')
+depends=('dotnet-runtime' 'vlc' 'ffmpeg')
+makedepends=('dotnet-sdk')
+
+# (1) Use the git repository (VERSION TAG) as source
+source=("$_reponame-$pkgver.tar.gz::$url/archive/refs/tags/v$_pkgver.tar.gz")
+provides=("${pkgname}")
+conflicts=("${pkgname}")
+sha256sums=('SKIP')
+# (2) Use the git repository (BRANCH) as source
+#source=("git+$url.git#branch=master")
+#provides=("${pkgname%-git}")
+#conflicts=("${pkgname%-git}")
+#sha256sums=('SKIP')
+# (3) Use the local directory as source
+#source=("../../")
+#provides=("${pkgname%-local}")
+#conflicts=("${pkgname%-local}")
+#sha256sums=('SKIP')
+
+# Stripping breaks the binary
+options=('!strip')
+
+# (2) Dynamically generate the pkgver based on the latest commit
+#pkgver() {
+#  cd "$srcdir/$_reponame"
+#
+#  # Generate version: latest tag + number of commits since + commit hash
+#  git describe --long --tags | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+#}
+
+build() {
+  cd "$srcdir"
+  # (1)
+  cd "$_reponame-$_pkgver"
+  # (2)
+  #cd "$_reponame"
+  # (3)
+  #cd "../.."
+
+  # Build single file executable that only needs the dotnet runtime to exist
+  dotnet publish "$_reponame" -c Release -o ./publish \
+    -p:PublishSingleFile=true \
+    -p:DebugType=none \
+    -p:PublishReadyToRun=false \
+    -p:IncludeNativeLibrariesForSelfExtract=true \
+    --self-contained false \
+    -p:DefineConstants="CUSTOM_FEATURE_INSTALLED"
+}
+
+package() {
+  cd "$srcdir"
+  # (1)
+  cd "$_reponame-$_pkgver"
+  # (2)
+  #cd "$_reponame"
+  # (3)
+  #cd "../.."
+
+  # Install the binary
+  install -Dm755 "publish/$_reponame" "$pkgdir/usr/bin/$_binname"
+  # Copy icon file to hicolor icons directory
+  install -Dm644 "$_reponame/Assets/cow.ico" "$pkgdir/usr/share/icons/hicolor/48x48/apps/$pkgname.ico"
+  # Create the .desktop file
+  cat <<EOF > "publish/$_reponame.desktop"
+[Desktop Entry]
+Name=$_displayname
+Comment=$pkgdesc
+Exec=/usr/bin/$_binname
+Icon=/usr/share/icons/hicolor/48x48/apps/$pkgname.ico
+Type=Application
+Categories=Audio;Sound;Video;Player;
+StartupNotify=true
+Terminal=false
+Version=1.0
+EOF
+  # Install the .desktop file to the appropriate location
+  install -Dm644 "publish/$_reponame.desktop" "$pkgdir/usr/share/applications/$pkgname.desktop"
+}
