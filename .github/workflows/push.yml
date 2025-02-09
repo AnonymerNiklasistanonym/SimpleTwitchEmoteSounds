@@ -19,12 +19,12 @@ jobs:
   push-deploy:
     strategy:
         matrix:
-          os: [windows-latest]
+          os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     env:
       Project_Path: SimpleTwitchEmoteSounds/SimpleTwitchEmoteSounds.csproj
       Output_Path: publish
-      Dotnet_Publish_Runtime: win-x64
+      Dotnet_Publish_Runtime: ${{ startsWith(matrix.os, 'windows') && 'win' || 'linux' }}-x64
 
     steps:
       - name: Checkout Repository
@@ -36,7 +36,7 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Publish Application
-        run: dotnet publish ${{ env.Project_Path }} -o ${{ env.Output_Path }} -r ${{ env.Dotnet_Publish_Runtime }} ${{ env.Dotnet_Publish_Options }}
+        run: dotnet publish ${{ env.Project_Path }} -o ${{ env.Output_Path }} -r ${{ env.Dotnet_Publish_Runtime }} ${{ env.Dotnet_Publish_Options }} ${{ env.Dotnet_Publish_Options_DefineConstants }}
         env:
           Dotnet_Publish_Options: -c Release -p:PublishSingleFile=true -p:DebugType=none -p:PublishReadyToRun=false -p:IncludeNativeLibrariesForSelfExtract=true --self-contained false
 
