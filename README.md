@@ -4,6 +4,101 @@ This application was created as a simple, easy-to-use, quick to set up, sound tr
 of entry and enable creators to add an Emote Sound within seconds, instead of the minute(s)-long process with current
 mainstream options like MixItUp and Streamer.bot.
 
+> [!NOTE]
+> This is a fork which includes a list of patches:
+>
+> - `patch-windows-installer-nsis`: Add a Windows installer based on NSIS
+> - `patch-multistage-cicd`: Add multi stage GitHub Actions CI/CD where the automatic GitHub release gets its artifact from the build step
+>   - `patch-multistage-cicd-linux`: Add GitHub Actions CI/CD Linux build support
+>   - `patch-multistage-cicd-windows-installer-nsis`: Add GitHub Actions CI/CD Windows installer using NSIS build support
+>   - `patch-multistage-cicd-release-notes`: Add GitHub Actions CI/CD release notes support
+> - `patch-linux-audio`: Run this program natively on Linux by using an audio workaround since the default audio API `NAudio` is not available
+> - `patch-linux-pkgbuild`: Add a `pacman` `PKGBUILD` file to easily install it on Arch Linux derivatives using the native package manager
+> - `patch-config-numbers`: Make configurations number strings to actual numbers that are parsed differently depending on the runtime locale
+> - `patch-readme`: Instructions about the patch list
+> - `patch-fix-crash-on-bad-config`: Fix crash on bad configurations and fallback to the default configuration instead
+>
+> **Merged patches:**
+>
+> - `patch-avalonia-tab-navigation`: Fix broken tab navigation on the main menu when cycling through added sounds
+>
+> **Run**:
+>
+> Install SDK and runtime dependencies (e.g. `sudo pacman -S dotnet-sdk mpv` on Linux), then run:
+>
+> ```sh>
+> dotnet run --project SimpleTwitchEmoteSounds
+> ```
+>
+> **Build**:
+>
+> Build a single program binary to the directory `publish` using:
+>
+> ```sh
+> dotnet publish SimpleTwitchEmoteSounds -o publish -c Release -p:PublishSingleFile=true -p:DebugType=none -p:PublishReadyToRun=false -p:IncludeNativeLibrariesForSelfExtract=true --self-contained false
+> ```
+>
+> Run the built application after making sure the runtime dependencies are installed (e.g. `sudo pacman -S dotnet-runtime mpv` on Linux):
+>
+> ```sh
+> ./publish/SimpleTwitchEmoteSounds
+> ```
+>
+> [**Update fork:**](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/syncing-a-fork)
+>
+> ```sh
+> git fetch upstream
+> git checkout master
+> git merge upstream/master
+> ```
+>
+> **Create patch branch:**
+>
+> ```sh
+> git fetch upstream
+> git checkout -b patch-NAME upstream/master
+> git push -u origin patch-NAME
+> ```
+>
+> **Update patch branch:**
+>
+> ```sh
+> git fetch upstream
+> git checkout patch-NAME
+> git rebase --onto NEW_BASE_TAG_OR_COMMIT OLD_BASE_TAG_OR_COMMIT
+> # e.g. git rebase --onto v1.3.1 v1.3.0
+> ```
+>
+> **Apply patches:**
+>
+> In case of updates that require more than just merging upstream modify the patches and then merge all of them into the latest upstream state:
+>
+> ```sh
+> git checkout patch-readme
+> cp merge.sh ../merge.sh
+> ../merge.sh
+> ```
+>
+> **Compare branches:**
+>
+> ```sh
+> # > All file changes
+> git diff REFERENCE_BRANCH NEW_BRANCH
+> # e.g. git diff patch-linux-audio upstream/master
+> # > Single file changes
+> git diff REFERENCE_BRANCH NEW_BRANCH -- filePath
+> # e.g. git diff upstream/master patch-linux-audio -- SimpleTwitchEmoteSounds/Services/AudioService.cs
+> ```
+>
+> **Copy commits to pull request / branch without creating automatic merge commits:**
+>
+> ```sh
+> # Copy a commit
+> git cherry-pick COMMIT_HASH
+> # Copy all commits of a branch (with changes that do not require any merge actions!)
+> git merge BRANCH_NAME --squash
+> ```
+
 - [📝 FAQ](#-faq)
     - [🤔 What is an Emote Sound?](#-what-is-an-emote-sound)
     - [❔ Why do that?](#-why-do-that)
