@@ -24,7 +24,9 @@ mainstream options like MixItUp and Streamer.bot.
 >
 > **Run**:
 >
-> ```sh
+> Install SDK and runtime dependencies (e.g. `sudo pacman -S dotnet-sdk mpv` on Linux), then run:
+>
+> ```sh>
 > dotnet run --project SimpleTwitchEmoteSounds
 > ```
 >
@@ -33,7 +35,13 @@ mainstream options like MixItUp and Streamer.bot.
 > Build a single program binary to the directory `publish` using:
 >
 > ```sh
-> dotnet publish SimpleTwitchEmoteSounds -o publish -c Release -p:PublishSingleFile=true -p:DebugType=none -p:PublishReadyToRun=false -p:IncludeNativeLibrariesForSelfExtract=true --self-contained false`.
+> dotnet publish SimpleTwitchEmoteSounds -o publish -c Release -p:PublishSingleFile=true -p:DebugType=none -p:PublishReadyToRun=false -p:IncludeNativeLibrariesForSelfExtract=true --self-contained false
+> ```
+>
+> Run the built application after making sure the runtime dependencies are installed (e.g. `sudo pacman -S dotnet-runtime mpv` on Linux):
+>
+> ```sh
+> ./publish/SimpleTwitchEmoteSounds
 > ```
 >
 > [**Update fork:**](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/syncing-a-fork)
