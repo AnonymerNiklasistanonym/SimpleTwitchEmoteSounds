@@ -1,18 +1,17 @@
 pkgbase = SimpleTwitchEmoteSounds
 	pkgdesc = Simple sound trigger for Twitch emotes for a Twitch channel
-	pkgver = 1.3.0
+	pkgver = 1.3.1
 	pkgrel = 1
 	url = https://github.com/AnonymerNiklasistanonym/SimpleTwitchEmoteSounds
 	arch = any
 	license = MIT
 	makedepends = dotnet-sdk
 	depends = dotnet-runtime
-	depends = vlc
-	depends = ffmpeg
+	depends = mpv
 	provides = SimpleTwitchEmoteSounds
 	conflicts = SimpleTwitchEmoteSounds
 	options = !strip
-	source = SimpleTwitchEmoteSounds-1.3.0.tar.gz::https://github.com/AnonymerNiklasistanonym/SimpleTwitchEmoteSounds/archive/refs/tags/v1.3.0-linux.tar.gz
-	sha256sums = SKIP
+	source = SimpleTwitchEmoteSounds-1.3.1.tar.gz::https://github.com/AnonymerNiklasistanonym/SimpleTwitchEmoteSounds/archive/refs/tags/v1.3.1-linux.tar.gz
+	sha256sums = f4f101d6403159ce7eabe02774c1ddec5e984d270435d2945026ee98074fe343
 
 pkgname = SimpleTwitchEmoteSounds
