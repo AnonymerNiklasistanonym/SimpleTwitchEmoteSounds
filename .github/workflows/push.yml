@@ -67,7 +67,7 @@ jobs:
     - name: Generate Changelog
       run: |
         echo "Linux and Windows binary require the [.NET runtime](https://dotnet.microsoft.com/en-us/download) to run." > ${{ github.workspace }}-CHANGELOG.txt
-        echo "Linux requires the binary to be marked as executable (\`chmod +x SimpleTwitchEmoteSounds\`)." >> ${{ github.workspace }}-CHANGELOG.txt
+        echo "Linux additionally requires [mpv](https://mpv.io/) for audio playback (e.g. \`pacman -S dotnet-runtime mpv\`) and the binary to be marked as executable (\`chmod +x SimpleTwitchEmoteSounds\`)." >> ${{ github.workspace }}-CHANGELOG.txt
     - name: Release
       uses: softprops/action-gh-release@v2
       with:
