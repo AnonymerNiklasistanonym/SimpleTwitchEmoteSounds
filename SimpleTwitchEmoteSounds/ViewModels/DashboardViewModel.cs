@@ -1,4 +1,6 @@
-﻿using System;
+﻿#region
+
+using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
@@ -7,17 +9,20 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.Notifications;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MiniTwitch.Irc.Models;
-using MsBox.Avalonia;
-using MsBox.Avalonia.Enums;
 using Serilog;
 using SimpleTwitchEmoteSounds.Extensions;
 using SimpleTwitchEmoteSounds.Models;
 using SimpleTwitchEmoteSounds.Services;
+using SimpleTwitchEmoteSounds.Services.Database;
 using SimpleTwitchEmoteSounds.Views;
+using SukiUI.Dialogs;
+
+#endregion
 
 // ReSharper disable ClassNeverInstantiated.Global
 // ReSharper disable UnusedParameterInPartialMethod
@@ -26,36 +31,69 @@ namespace SimpleTwitchEmoteSounds.ViewModels;
 
 public partial class DashboardViewModel : ViewModelBase
 {
-    [ObservableProperty] private string _username = ConfigService.State.Username;
-    [ObservableProperty] private bool _isConnected;
-    [ObservableProperty] private string _connectButtonText = "Connect";
-    [ObservableProperty] private string _connectButtonColor = "white";
-    [ObservableProperty] private bool _isEnabled = true;
-    [ObservableProperty] private string _searchText = string.Empty;
-    [ObservableProperty] private string _toggleButtonText = "Register Hotkey";
-    [ObservableProperty] private string _updateButtonText = "v1.3.1";
-    [ObservableProperty] private bool _isListening;
-    private static Hotkey ToggleHotkey => ConfigService.Settings.EnableHotkey;
-    private static ObservableCollection<SoundCommand> SoundCommands => ConfigService.Settings.SoundCommands;
+    [ObservableProperty]
+    private string _username;
+
+    [ObservableProperty]
+    private bool _isConnected;
+
+    [ObservableProperty]
+    private string _connectButtonText = "Connect";
+
+    [ObservableProperty]
+    private string _connectButtonColor = "white";
+
+    [ObservableProperty]
+    private bool _isEnabled = true;
+
+    [ObservableProperty]
+    private string _searchText = string.Empty;
+
+    [ObservableProperty]
+    private string _toggleButtonText = "Register Hotkey";
+
+    [ObservableProperty]
+    private string _updateButtonText = "v1.3.2";
+
+    [ObservableProperty]
+    private bool _isListening;
+    private Hotkey ToggleHotkey => _configService.Settings.EnableHotkey;
+    private ObservableCollection<SoundCommand> SoundCommands =>
+        _configService.Settings.SoundCommands;
     public FilteredObservableCollection<SoundCommand> FilteredSoundCommands { get; }
 
     private readonly TwitchService _twitchService;
     private readonly IHotkeyService _hotkeyService;
+    private readonly DatabaseConfigService _configService;
+    private readonly IAudioPlaybackService _audioPlaybackService;
+    private readonly ISukiDialogManager _dialogManager;
 
-    public DashboardViewModel(TwitchService twitchService, IHotkeyService hotkeyService)
+    public DashboardViewModel(
+        TwitchService twitchService,
+        IHotkeyService hotkeyService,
+        DatabaseConfigService configService,
+        IAudioPlaybackService audioPlaybackService,
+        ISukiDialogManager dialogManager
+    )
     {
         _twitchService = twitchService;
         _hotkeyService = hotkeyService;
+        _configService = configService;
+        _audioPlaybackService = audioPlaybackService;
+        _dialogManager = dialogManager;
+
+        Username = _configService.State.Username;
         _twitchService.ConnectionStatus += TwitchServiceConnectionStatus;
         _twitchService.MessageLogged += TwitchServiceMessageLogged;
         _hotkeyService.RegisterHotkey(ToggleHotkey, ToggleEnabled);
         ToggleButtonText = ToggleHotkey.ToString();
 
-        ConfigService.Settings.RefreshSubscriptions();
+        _configService.Settings.RefreshSubscriptions();
         FilteredSoundCommands = new FilteredObservableCollection<SoundCommand>(
-            ConfigService.Settings.SoundCommands,
-            v => string.IsNullOrEmpty(SearchText) ||
-                 v.DisplayName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+            _configService.Settings.SoundCommands,
+            v =>
+                string.IsNullOrEmpty(SearchText)
+                || v.DisplayName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
         );
 
         if (!string.IsNullOrEmpty(Username))
@@ -89,7 +127,7 @@ public partial class DashboardViewModel : ViewModelBase
         var mainWindow = GetMainWindow();
         var dialog = new NewSoundCommandDialog
         {
-            WindowStartupLocation = WindowStartupLocation.CenterOwner
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
         var result = await dialog.ShowDialog<NewSoundCommandResult?>(mainWindow);
 
@@ -100,15 +138,20 @@ public partial class DashboardViewModel : ViewModelBase
 
         var topLevel = TopLevel.GetTopLevel(mainWindow);
 
-        var files = await topLevel?.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = "Select Audio Files",
-            AllowMultiple = true,
-            FileTypeFilter =
-            [
-                new FilePickerFileType("Audio Files") { Patterns = ["*.mp3", "*.wav", "*.ogg"] }
-            ]
-        })!;
+        var files = await topLevel?.StorageProvider.OpenFilePickerAsync(
+            new FilePickerOpenOptions
+            {
+                Title = "Select Audio Files",
+                AllowMultiple = true,
+                FileTypeFilter =
+                [
+                    new FilePickerFileType("Audio Files")
+                    {
+                        Patterns = ["*.mp3", "*.wav", "*.ogg"],
+                    },
+                ],
+            }
+        )!;
 
         if (files is { Count: >= 1 })
         {
@@ -116,60 +159,68 @@ public partial class DashboardViewModel : ViewModelBase
             {
                 Name = result.Name,
                 Category = result.Category,
-                SoundFiles = []
+                SoundFiles = [],
             };
 
             foreach (var f in files)
             {
+                var managedFileName = await _audioPlaybackService.CopyToManagedAudio(
+                    f.Path.LocalPath
+                );
                 sc.SoundFiles.Add(new SoundFile
                 {
-                    FileName = f.Name,
-                    FilePath = f.Path.LocalPath,
+                    FileName = managedFileName,
                     Percentage = "1"
                 });
             }
 
             SoundCommands.Add(sc);
             FilteredSoundCommands.Refresh();
-            ConfigService.Settings.RefreshSubscriptions();
+            _configService.Settings.RefreshSubscriptions();
         }
     }
 
     [RelayCommand]
     private Task PreviewSound(SoundCommand soundCommand)
     {
-        _ = AudioService.PlaySound(soundCommand);
+        _ = _audioPlaybackService.PlaySound(soundCommand);
         return Task.CompletedTask;
     }
 
     [RelayCommand]
     private async Task EditSound(SoundCommand soundCommand)
     {
-        var dialog = new EditSoundCommandDialog(soundCommand)
+        var dialog = new EditSoundCommandDialog(soundCommand, _audioPlaybackService)
         {
-            WindowStartupLocation = WindowStartupLocation.CenterOwner
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
         var result = await dialog.ShowDialog<SoundCommand?>(GetMainWindow());
 
         if (result != null)
         {
             FilteredSoundCommands.Refresh();
-            ConfigService.Settings.RefreshSubscriptions();
+            _configService.Settings.RefreshSubscriptions();
         }
     }
 
     [RelayCommand]
     private async Task RemoveSound(SoundCommand soundCommand)
     {
-        var result = await ShowConfirmationDialog(
-            "Remove Sound",
-            $"Are you sure you want to remove the sound '{soundCommand.Name}'?");
+        var task = _dialogManager.CreateDialog()
+            .OfType(NotificationType.Warning)
+            .WithTitle("Remove Sound")
+            .WithContent($"Are you sure you want to remove the sound '{soundCommand.Name}'?")
+            .WithYesNoResult("Yes", "No")
+            .Dismiss().ByClickingBackground()
+            .TryShowAsync();
 
-        if (result == ButtonResult.Yes)
+        var result = await task;
+
+        if (result)
         {
             SoundCommands.Remove(soundCommand);
             FilteredSoundCommands.Refresh();
-            ConfigService.Settings.RefreshSubscriptions();
+            _configService.Settings.RefreshSubscriptions();
         }
     }
 
@@ -192,7 +243,7 @@ public partial class DashboardViewModel : ViewModelBase
     private void RegisterHotkey(Hotkey combo)
     {
         _hotkeyService.UnregisterHotkey(ToggleHotkey);
-        ConfigService.Settings.EnableHotkey = combo;
+        _configService.Settings.EnableHotkey = combo;
         _hotkeyService.RegisterHotkey(ToggleHotkey, ToggleEnabled);
         ResetState();
     }
@@ -200,6 +251,13 @@ public partial class DashboardViewModel : ViewModelBase
     [RelayCommand]
     private void ToggleSound(SoundCommand soundCommand)
     {
+        var focusedElement = GetMainWindow().FocusManager?.GetFocusedElement();
+
+        if (focusedElement is Button)
+        {
+            return;
+        }
+
         soundCommand.Enabled = !soundCommand.Enabled;
     }
 
@@ -213,19 +271,9 @@ public partial class DashboardViewModel : ViewModelBase
         });
     }
 
-    [RelayCommand]
-    private async Task ViewSoundCommandStats()
-    {
-        var dialog = new SoundStatsDialogView
-        {
-            WindowStartupLocation = WindowStartupLocation.CenterOwner
-        };
-        await dialog.ShowDialog(GetMainWindow());
-    }
-
     partial void OnUsernameChanged(string value)
     {
-        ConfigService.State.Username = value;
+        _configService.State.Username = value;
     }
 
     partial void OnSearchTextChanged(string value)
@@ -242,50 +290,72 @@ public partial class DashboardViewModel : ViewModelBase
 
     private async void TwitchServiceMessageLogged(Privmsg msg)
     {
-        if (!IsEnabled)
+        try
         {
-            return;
-        }
-
-        foreach (var soundCommand in SoundCommands)
-        {
-            if (!soundCommand.Enabled)
+            if (!IsEnabled)
             {
-                Log.Debug($"Sound command '{soundCommand.Name}' is disabled. Skipping.");
-                continue;
+                return;
             }
 
-            var isMatch = soundCommand.Names.Any(name =>
+            foreach (var soundCommand in SoundCommands)
             {
-                return soundCommand.SelectedMatchType switch
+                if (!soundCommand.Enabled)
                 {
-                    MatchType.Equals => msg.Content.Trim().Equals(name),
-                    MatchType.StartsWith => msg.Content.Trim().StartsWith(name),
-                    MatchType.StartsWithWord => msg.Content.Trim().Split(' ')[0].Equals(name.Trim()),
-                    MatchType.ContainsWord => Regex.IsMatch(msg.Content, $@"\b{Regex.Escape(name)}\b"),
-                    _ => throw new ArgumentOutOfRangeException()
-                };
-            });
+                    Log.Debug($"Sound command '{soundCommand.Name}' is disabled. Skipping.");
+                    continue;
+                }
 
-            if (!isMatch)
-            {
-                continue;
-            }
+                if (soundCommand.IsOnCooldown)
+                {
+                    Log.Debug($"Sound command '{soundCommand.Name}' is on cooldown. Skipping.");
+                    continue;
+                }
 
-            var shouldPlay = ShouldPlaySound(float.Parse(soundCommand.PlayChance));
-            Log.Debug(
-                $"Command '{soundCommand.Name}' matched. Play chance: {soundCommand.PlayChance}%. Should play: {shouldPlay}");
+                var isMatch = soundCommand.Names.Any(name =>
+                {
+                    return soundCommand.SelectedMatchType switch
+                    {
+                        MatchType.Equals => msg.Content.Trim().Equals(name),
+                        MatchType.StartsWith => msg.Content.Trim().StartsWith(name),
+                        MatchType.StartsWithWord => msg
+                            .Content.Trim()
+                            .Split(' ')[0]
+                            .Equals(name.Trim()),
+                        MatchType.ContainsWord => Regex.IsMatch(
+                            msg.Content,
+                            $@"\b{Regex.Escape(name)}\b"
+                        ),
+                        _ => throw new ArgumentOutOfRangeException(),
+                    };
+                });
 
-            if (!shouldPlay)
-            {
+                if (!isMatch)
+                {
+                    continue;
+                }
+
+                var shouldPlay = ShouldPlaySound(float.Parse(soundCommand.PlayChance));
                 Log.Debug(
-                    $"Command '{soundCommand.Name}' matched but didn't pass the play chance check. Continuing to next command.");
-                continue;
-            }
+                    $"Command '{soundCommand.Name}' matched. Play chance: {soundCommand.PlayChance}%. Should play: {shouldPlay}"
+                );
 
-            Log.Debug($"Playing sound for command: {soundCommand.Name}");
-            await AudioService.PlaySound(soundCommand);
-            break;
+                if (!shouldPlay)
+                {
+                    Log.Debug(
+                        $"Command '{soundCommand.Name}' matched but didn't pass the play chance check. Continuing to next command."
+                    );
+                    continue;
+                }
+
+                Log.Debug($"Playing sound for command: {soundCommand.Name}");
+                soundCommand.UpdateLastPlayedTime();
+                await _audioPlaybackService.PlaySound(soundCommand);
+                break;
+            }
+        }
+        catch (Exception e)
+        {
+            Log.Error(e, "Exception when attempting to play sound command, ");
         }
     }
 
@@ -294,7 +364,8 @@ public partial class DashboardViewModel : ViewModelBase
         var randomValue = (float)Random.Shared.NextDouble();
         var shouldPlay = randomValue <= playChance;
         Log.Debug(
-            $"Play chance check: Random value: {randomValue:F4}, Play chance: {playChance:F4}, Should play: {shouldPlay}");
+            $"Play chance check: Random value: {randomValue:F4}, Play chance: {playChance:F4}, Should play: {shouldPlay}"
+        );
         return shouldPlay;
     }
 
@@ -330,21 +401,19 @@ public partial class DashboardViewModel : ViewModelBase
         _hotkeyService.StopListeningForNextKey();
     }
 
-    private static async Task<ButtonResult> ShowConfirmationDialog(string title, string message)
+    public void RefreshAfterMigration()
     {
-        var messageBoxStandardWindow = MessageBoxManager.GetMessageBoxStandard(
-            title,
-            message,
-            ButtonEnum.YesNo,
-            Icon.Question,
-            WindowStartupLocation.CenterOwner
-        );
-
-        return await messageBoxStandardWindow.ShowWindowDialogAsync(GetMainWindow());
+        Log.Information("Refreshing DashboardViewModel after migration");
+        Username = _configService.State.Username;
+        FilteredSoundCommands.UpdateSource(_configService.Settings.SoundCommands);
+        FilteredSoundCommands.Refresh();
+        ToggleButtonText = ToggleHotkey.ToString();
     }
 
     private static Window GetMainWindow()
     {
-        return ((IClassicDesktopStyleApplicationLifetime)Application.Current!.ApplicationLifetime!).MainWindow!;
+        return (
+            (IClassicDesktopStyleApplicationLifetime)Application.Current!.ApplicationLifetime!
+        ).MainWindow!;
     }
 }

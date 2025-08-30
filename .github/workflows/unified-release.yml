@@ -1,0 +1,256 @@
+name: Build and Package ${{ vars.APP_NAME || 'SimpleTwitchEmoteSounds' }} (Cross-Platform)
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  APP_NAME: SimpleTwitchEmoteSounds
+  DOTNET_VERSION: "8.0.x"
+  REPO_URL: https://github.com/Ganom/SimpleTwitchEmoteSounds
+
+jobs:
+  generate-changelog:
+    runs-on: ubuntu-latest
+    outputs:
+      changelog: ${{ steps.changelog.outputs.changelog }}
+      version: ${{ steps.get-version.outputs.version }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Get Version from Tag
+        id: get-version
+        run: |
+          version="${{ github.ref_name }}"
+          version="${version#v}"
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Generate Changelog
+        id: changelog
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const tag = context.ref.replace('refs/tags/', '');
+            
+            // Get the previous tag
+            const tags = await github.rest.repos.listTags({ owner, repo, per_page: 100 });
+            const currentTagIndex = tags.data.findIndex(t => t.name === tag);
+            const previousTag = currentTagIndex < tags.data.length - 1 ? tags.data[currentTagIndex + 1].name : null;
+            
+            let changelogContent = `# Release ${tag}\n\n## What's Changed\n\n`;
+            
+            if (previousTag) {
+              const comparison = await github.rest.repos.compareCommits({ owner, repo, base: previousTag, head: tag });
+              const features = [], fixes = [], others = [];
+              let ciChangesCount = 0;
+            
+              comparison.data.commits.forEach(commit => {
+                const message = commit.commit.message.split('\n')[0];
+                const author = commit.commit.author.name;
+                const login = commit.author?.login || author;
+                const cleanMessage = message.replace(/^(feat|fix|docs|style|refactor|test|chore)(\([^)]+\))?:\s*/i, '');
+            
+                if (message.toLowerCase().match(/^(feat|fix|chore|ci)\(ci\):/i) || message.toLowerCase().match(/^(ci|chore).*\b(ci|workflow|github|action|release|build|deploy|pipeline)\b/i) || message.toLowerCase().includes('.github/workflows')) {
+                  ciChangesCount++;
+                } else if (message.toLowerCase().match(/^(feat|add)/)) {
+                  features.push(`- ${cleanMessage} by @${login}`);
+                } else if (message.toLowerCase().match(/^(fix|bug)/)) {
+                  fixes.push(`- ${cleanMessage} by @${login}`);
+                } else {
+                  others.push(`- ${cleanMessage} by @${login}`);
+                }
+              });
+            
+              if (features.length > 0) changelogContent += `### New Features\n\n${features.join('\n')}\n\n`;
+              if (fixes.length > 0) changelogContent += `### Bug Fixes\n\n${fixes.join('\n')}\n\n`;
+              if (ciChangesCount > 0) changelogContent += `### CI & Build Improvements\n\n- ${ciChangesCount} CI/build improvements and maintenance updates\n\n`;
+              if (others.length > 0) changelogContent += `### Other Changes\n\n${others.join('\n')}\n\n`;
+              changelogContent += `---\n\n[**Full Changelog**](https://github.com/${owner}/${repo}/compare/${previousTag}...${tag})\n`;
+            } else {
+              changelogContent += `Initial release of ${{ env.APP_NAME }} ${tag}\n`;
+            }
+            
+            const fs = require('fs');
+            fs.writeFileSync('CHANGELOG.md', changelogContent);
+            core.setOutput('changelog', changelogContent);
+
+      - name: Upload Changelog Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog
+          path: CHANGELOG.md
+
+  build:
+    needs: generate-changelog
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            arch: x64
+            runtime: win-x64
+            executable: ${{ env.APP_NAME }}.exe
+            icon_suffix: ico
+            
+          #- os: macos-latest
+          #  platform: macos
+          #  arch: arm64
+          #  runtime: osx-arm64
+          #  executable: ${{ env.APP_NAME }}
+          #  icon_suffix: icns
+            
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+            runtime: linux-x64
+            executable: ${{ env.APP_NAME }}
+            icon_suffix: png
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download Changelog
+        uses: actions/download-artifact@v4
+        with:
+          name: changelog
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Import Apple Certificate
+        if: matrix.platform == 'macos'
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          security create-keychain -p temp_password temp.keychain
+          security default-keychain -s temp.keychain
+          security unlock-keychain -p temp_password temp.keychain
+          echo "$APPLE_CERTIFICATE_P12" | base64 --decode > certificate.p12
+          security import certificate.p12 -k temp.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k temp_password temp.keychain
+          rm certificate.p12
+
+      - name: Build Application
+        shell: pwsh
+        run: |
+          $publishDir = "./publish-${{ matrix.arch }}"
+          dotnet publish ${{ env.APP_NAME }}/${{ env.APP_NAME }}.csproj -c Release --self-contained -r ${{ matrix.runtime }} -o $publishDir /p:PublishTrimmed=false /p:PublishReadyToRun=false /p:PublishSingleFile=false
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Verify Build Structure
+        shell: bash
+        run: |
+          publish_dir="./publish-${{ matrix.arch }}"
+          executable="${{ env.APP_NAME }}${{ matrix.platform == 'windows' && '.exe' || '' }}"
+          if [[ -f "$publish_dir/$executable" ]]; then
+            echo "✅ Main executable found."
+          else
+            echo "❌ ERROR: Main executable not found in '$publish_dir'!"
+            ls -la "$publish_dir"
+            exit 1
+          fi
+
+      - name: Install Velopack CLI
+        run: dotnet tool install -g vpk
+
+      - name: Download Existing Releases
+        run: vpk download github --repoUrl ${{ env.REPO_URL }} --token ${{ secrets.STES_TOKEN }}
+
+      - name: Create Velopack Release (Windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $publishDir = "./publish-${{ matrix.arch }}"
+          $iconPath = "./${{ env.APP_NAME }}/Assets/icon.${{ matrix.icon_suffix }}"
+          $executable = "${{ env.APP_NAME }}.exe"
+          $vpkArgs = @("pack", "--packId", "${{ env.APP_NAME }}", "--packVersion", "${{ needs.generate-changelog.outputs.version }}", "--packDir", $publishDir, "--mainExe", $executable, "--packTitle", "${{ env.APP_NAME }}", "--releaseNotes", "CHANGELOG.md")
+          if (Test-Path $iconPath) { $vpkArgs += @("--icon", $iconPath) }
+          vpk @vpkArgs
+
+      - name: Create Velopack Release (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          publish_dir="./publish-${{ matrix.arch }}"
+          icon_path="./${{ env.APP_NAME }}/Assets/icon.${{ matrix.icon_suffix }}"
+          executable="${{ env.APP_NAME }}"
+          vpk_args=("pack" "--packId" "${{ env.APP_NAME }}" "--packVersion" "${{ needs.generate-changelog.outputs.version }}" "--packDir" "$publish_dir" "--mainExe" "$executable" "--packTitle" "${{ env.APP_NAME }}" "--releaseNotes" "CHANGELOG.md" "--runtime" "${{ matrix.runtime }}")
+          if [[ -f "$icon_path" ]]; then vpk_args+=("--icon" "$icon_path"); fi
+          
+          if [[ "${{ matrix.platform }}" == "macos" ]]; then
+            APP_SIGNING_IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+            INSTALLER_SIGNING_IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Installer" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+            if [[ -n "$APP_SIGNING_IDENTITY" && -n "$INSTALLER_SIGNING_IDENTITY" ]]; then
+                echo "🔑 Using signing identities for macOS."
+                vpk_args+=("--signAppIdentity" "$APP_SIGNING_IDENTITY" "--signInstallIdentity" "$INSTALLER_SIGNING_IDENTITY")
+            else
+                echo "Building without code signing (no certificates found)."
+            fi
+          fi
+          vpk "${vpk_args[@]}"
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            Releases/*
+            Setup.exe
+          retention-days: 1
+
+      - name: Cleanup Keychain
+        if: always() && matrix.platform == 'macos'
+        run: security delete-keychain temp.keychain || true
+
+  release:
+    needs: [generate-changelog, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download All Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Prepare Release Assets
+        run: |
+          mkdir -p ./release-assets
+          priority_files=(
+            "*win*-Setup.exe"
+            "*osx*-Setup.pkg"
+            "*.AppImage"
+            "*win*-Portable.zip"
+            "*osx*-Portable.zip"
+          )
+          for pattern in "${priority_files[@]}"; do
+            find ./artifacts -type f -name "$pattern" -exec cp -v {} ./release-assets/ \;
+          done
+          # Copy all other artifact files without overwriting
+          find ./artifacts -type f -exec cp -n -v {} ./release-assets/ \;
+          echo "=== Final Release Assets ==="
+          ls -la ./release-assets/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./release-assets/*
+          body: ${{ needs.generate-changelog.outputs.changelog }}
+          generate_release_notes: true
+          name: "${{ env.APP_NAME }} ${{ github.ref_name }}"
+          tag_name: "${{ github.ref_name }}"
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

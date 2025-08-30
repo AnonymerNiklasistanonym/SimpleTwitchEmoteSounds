@@ -1,16 +1,30 @@
-﻿using Avalonia.Controls;
+﻿#region
+
 using Avalonia.Markup.Xaml;
-using SimpleTwitchEmoteSounds.ViewModels;
 using SimpleTwitchEmoteSounds.Models;
+using SimpleTwitchEmoteSounds.Services;
+using SimpleTwitchEmoteSounds.ViewModels;
+using SukiUI.Controls;
+
+#endregion
 
 namespace SimpleTwitchEmoteSounds.Views;
 
-public partial class EditSoundCommandDialog : Window
+public partial class EditSoundCommandDialog : SukiWindow
 {
-    public EditSoundCommandDialog(SoundCommand soundCommand)
+    // ReSharper disable once UnusedMember.Global
+    public EditSoundCommandDialog()
     {
         InitializeComponent();
-        DataContext = new EditSoundCommandDialogViewModel(soundCommand);
+    }
+
+    public EditSoundCommandDialog(
+        SoundCommand soundCommand,
+        IAudioPlaybackService audioPlaybackService
+    )
+    {
+        InitializeComponent();
+        DataContext = new EditSoundCommandDialogViewModel(soundCommand, audioPlaybackService);
         ((EditSoundCommandDialogViewModel)DataContext).CloseRequested += ViewModel_CloseRequested;
     }
 

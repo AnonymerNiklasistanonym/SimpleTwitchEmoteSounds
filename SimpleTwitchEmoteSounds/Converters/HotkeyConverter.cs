@@ -1,8 +1,12 @@
-﻿using System;
+﻿#region
+
+using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
-using SharpHook.Native;
+using SharpHook.Data;
 using SimpleTwitchEmoteSounds.Models;
+
+#endregion
 
 namespace SimpleTwitchEmoteSounds.Converters;
 
@@ -25,8 +29,13 @@ public class HotkeyConverter : JsonConverter<Hotkey>
         writer.WriteEndArray();
     }
 
-    public override Hotkey? ReadJson(JsonReader reader, Type objectType, Hotkey? existingValue, bool hasExistingValue,
-        JsonSerializer serializer)
+    public override Hotkey? ReadJson(
+        JsonReader reader,
+        Type objectType,
+        Hotkey? existingValue,
+        bool hasExistingValue,
+        JsonSerializer serializer
+    )
     {
         if (reader.TokenType == JsonToken.Null)
         {
