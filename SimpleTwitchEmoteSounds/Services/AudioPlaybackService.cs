@@ -4,6 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
@@ -237,19 +238,17 @@ public class AudioPlaybackService : IAudioPlaybackService
             IsBusy = true;
             try
             {
-                await using var audioFile = new AudioFileReader(request.FilePath);
-                _outputDevice = new WaveOutEvent();
-                var volumeProvider = new VolumeSampleProvider(audioFile)
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    Volume = request.Volume,
-                };
-
-                _outputDevice.Init(volumeProvider);
-                _outputDevice.Play();
-
-                while (_outputDevice.PlaybackState == PlaybackState.Playing && !_disposed)
+                    await AudioServiceLinux.PlayAudioFile(request.FilePath, request.Volume);
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    await Task.Delay(50);
+                    await PlayOnWindowsAsync(request);
+                }
+                else
+                {
+                    Log.Error("Unsupported OS platform for audio playback");
                 }
             }
             catch (Exception ex)
@@ -263,6 +262,25 @@ public class AudioPlaybackService : IAudioPlaybackService
                 IsBusy = false;
             }
         }
+
+        private async Task PlayOnWindowsAsync(AudioPlaybackRequest request)
+        {
+            await using var audioFile = new AudioFileReader(request.FilePath);
+            _outputDevice = new WaveOutEvent();
+            var volumeProvider = new VolumeSampleProvider(audioFile)
+            {
+                Volume = request.Volume,
+            };
+
+            _outputDevice.Init(volumeProvider);
+            _outputDevice.Play();
+
+            while (_outputDevice.PlaybackState == PlaybackState.Playing && !_disposed)
+            {
+                await Task.Delay(50);
+            }
+        }
+
 
         public void Dispose()
         {
