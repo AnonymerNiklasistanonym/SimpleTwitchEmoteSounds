@@ -19,13 +19,13 @@ jobs:
   push-deploy:
     strategy:
         matrix:
-          os: [windows-latest]
+          os: [ubuntu-latest, windows-latest]
           portable: [true, false]
     runs-on: ${{ matrix.os }}
     env:
       Project_Path: SimpleTwitchEmoteSounds/SimpleTwitchEmoteSounds.csproj
       Output_Path: publish
-      Dotnet_Publish_Runtime: win-x64
+      Dotnet_Publish_Runtime: ${{ startsWith(matrix.os, 'windows') && 'win' || 'linux' }}-x64
 
     steps:
       - name: Checkout Repository
