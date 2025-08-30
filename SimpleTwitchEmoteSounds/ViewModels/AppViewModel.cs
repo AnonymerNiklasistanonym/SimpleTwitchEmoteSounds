@@ -63,20 +63,16 @@ public partial class AppViewModel : ObservableObject, IDisposable
     public ISukiDialogManager DialogManager { get; }
 
     private readonly PageNavigationService _pageNavigationService;
-    private readonly IUpdateService _updateService;
     private readonly JsonToDbMigrationService _migrationService;
     private readonly DatabaseConfigService _configService;
 
     private bool _disposed;
-    private UpdateInfo? _pendingUpdate;
-    private ISukiToast _currentToast = new SukiToast();
 
     public AppViewModel(
         IEnumerable<ViewModelBase> appPages,
         PageNavigationService pageNavigationService,
         ISukiDialogManager dialogManager,
         ISukiToastManager toastManager,
-        IUpdateService updateService,
         IHotkeyService hotkeyService,
         JsonToDbMigrationService migrationService,
         DatabaseConfigService configService
@@ -85,7 +81,6 @@ public partial class AppViewModel : ObservableObject, IDisposable
         DialogManager = dialogManager;
         ToastManager = toastManager;
         _pageNavigationService = pageNavigationService;
-        _updateService = updateService;
         _migrationService = migrationService;
         _configService = configService;
 
@@ -113,9 +108,7 @@ public partial class AppViewModel : ObservableObject, IDisposable
                 new SukiColorTheme("Koko", Color.Parse("#B24DB0"), Color.Parse("#ED8E12"))
             );
 
-        _updateService.UpdateAvailable += OnUpdateAvailable;
-        _updateService.UpdateError += OnUpdateError;
-        CurrentVersion = _updateService.CurrentVersion?.ToString() ?? "Unknown";
+        CurrentVersion = "v2.0.1";
         UpdateVersionButtonText();
     }
 
@@ -354,136 +347,21 @@ public partial class AppViewModel : ObservableObject, IDisposable
     #region Update Management - EXACT copy from SplashViewModel
 
     [RelayCommand]
-    private async Task ShowUpdateInfo()
+    private void ShowUpdateInfo()
     {
-        if (IsUpdateAvailable && _pendingUpdate != null)
-        {
-            _ = Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                DialogManager
-                    .CreateDialog()
-                    .WithTitle($"Update to {TargetVersion} available!")
-                    .WithViewModel(dialog => new UpdateAvailableDialogViewModel(
-                        dialog,
-                        CurrentVersion,
-                        TargetVersion,
-                        ReleaseNotes,
-                        PackageSize,
-                        _pendingUpdate,
-                        _updateService,
-                        ToastManager
-                    ))
-                    .Dismiss()
-                    .ByClickingBackground()
-                    .TryShow();
-            });
-        }
-        else
-        {
-            ShowToast(
-                NotificationType.Information,
-                "Checking for Updates",
-                "Checking for available updates..."
-            );
-
-            try
-            {
-                await _updateService.CheckForUpdatesAsync();
-
-                if (!IsUpdateAvailable)
-                {
-                    ShowToast(
-                        NotificationType.Success,
-                        "No Updates Available",
-                        $"You're running the latest version: {CurrentVersion}"
-                    );
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Error checking for updates");
-                ShowToast(
-                    NotificationType.Error,
-                    "Update Check Failed",
-                    "Failed to check for updates. Please try again later."
-                );
-            }
-        }
+        var url = "https://github.com/AnonymerNiklasistanonym/SimpleTwitchEmoteSounds/releases";
+        #if WINDOWS
+                Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") { CreateNoWindow = true });
+        #elif MACOS
+                Process.Start("open", url);
+        #else // Linux and others
+                Process.Start("xdg-open", url);
+        #endif
     }
 
     private void UpdateVersionButtonText()
     {
         VersionButtonText = IsUpdateAvailable ? "Update Available" : $"Version {CurrentVersion}";
-    }
-
-    private void OnUpdateAvailable(object? sender, UpdateAvailableEventArgs e)
-    {
-        Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            _pendingUpdate = e.UpdateInfo;
-            TargetVersion = e.UpdateInfo.TargetFullRelease.Version?.ToString() ?? "Unknown";
-            ReleaseNotes = e.CombinedReleaseNotes ?? "No release notes available.";
-            PackageSize = FormatBytes(e.UpdateInfo.TargetFullRelease.Size);
-            IsUpdateAvailable = true;
-            UpdateVersionButtonText();
-
-            ToastManager.Dismiss(_currentToast);
-
-            _currentToast = ToastManager
-                .CreateToast()
-                .OfType(NotificationType.Information)
-                .WithTitle("Update Available")
-                .WithContent($"Update version {TargetVersion} is available for download!")
-                .WithActionButton("Later", _ => { }, true, SukiButtonStyles.Basic)
-                .WithActionButton(
-                    "Update",
-                    _ =>
-                    {
-                        Dispatcher.UIThread.InvokeAsync(ShowUpdateInfo);
-                    },
-                    true
-                )
-                .Queue();
-        });
-    }
-
-    private void OnUpdateError(object? sender, UpdateErrorEventArgs e)
-    {
-        Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            ToastManager.Dismiss(_currentToast);
-
-            _currentToast = ToastManager
-                .CreateToast()
-                .OfType(NotificationType.Information)
-                .WithTitle("Update Error")
-                .WithContent($"We were unable to grab latest release! {e.Message}")
-                .WithActionButton("Later", _ => { }, true, SukiButtonStyles.Basic)
-                .WithActionButton(
-                    "Update",
-                    _ =>
-                    {
-                        Dispatcher.UIThread.InvokeAsync(ShowUpdateInfo);
-                    },
-                    true
-                )
-                .Queue();
-        });
-    }
-
-    private static string FormatBytes(long bytes)
-    {
-        const int scale = 1024;
-        string[] orders = ["bytes", "KB", "MB", "GB", "TB"];
-        var max = (long)Math.Pow(scale, orders.Length - 1);
-
-        foreach (var order in orders)
-        {
-            if (bytes > max)
-                return $"{decimal.Divide(bytes, max):##.##} {order}";
-            max /= scale;
-        }
-        return "0 bytes";
     }
 
     #endregion
@@ -512,8 +390,6 @@ public partial class AppViewModel : ObservableObject, IDisposable
 
         try
         {
-            _updateService.UpdateAvailable -= OnUpdateAvailable;
-            _updateService.UpdateError -= OnUpdateError;
         }
         finally
         {
