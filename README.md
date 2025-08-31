@@ -4,6 +4,37 @@ This application was created as a simple, easy-to-use, quick to set up, sound tr
 of entry and enable creators to add an Emote Sound within seconds, instead of the minute(s)-long process with current
 mainstream options like MixItUp and Streamer.bot.
 
+> [!NOTE]
+> This is a fork to enable audio playback on Linux and a simple Windows installer that everyone can create which includes the following patches on top of the original code by Ganom:
+>
+> - `patch-linux-audio-v2`: Run this program natively on Linux by using an audio workaround since the default audio API `NAudio` is not available
+> - `feature-disable-update-service-v2`: Disable the update service
+> - `feature-win-installer-v2`: Add a simple Windows installer based on NSIS
+> - `feature-cicd-v2`: Replace original CI/CD with simple multi stage script that supports disabling the update service and the NSIS Windows installer that runs without any variables needed for the original CI/CD
+> - `feature-linux-pkgbuild-v2`: Add a `pacman` `PKGBUILD` file to easily install it on Arch Linux derivatives using the native package manager
+>
+> **Run**:
+>
+> Install SDK and runtime dependencies (e.g. `sudo pacman -S dotnet-sdk mpv` on Linux), then run:
+>
+> ```sh
+> dotnet run --project SimpleTwitchEmoteSounds/SimpleTwitchEmoteSounds.csproj
+> ```
+>
+> **Build**:
+>
+> Build a single program binary to the directory `publish` using:
+>
+> ```sh
+> dotnet publish SimpleTwitchEmoteSounds/SimpleTwitchEmoteSounds.csproj -o publish -c Release -p:PublishSingleFile=true -p:DebugType=none -p:PublishReadyToRun=false -p:IncludeNativeLibrariesForSelfExtract=true --self-contained false -p:DefineConstants="DISABLE_UPDATE_SERVICE"
+> ```
+>
+> Run the built application after making sure the runtime dependencies are installed (e.g. `sudo pacman -S dotnet-runtime mpv` on Linux):
+>
+> ```sh
+> ./publish/SimpleTwitchEmoteSounds
+> ```
+
 - [📝 FAQ](#-faq)
     - [🤔 What is an Emote Sound?](#-what-is-an-emote-sound)
     - [❔ Why do that?](#-why-do-that)
