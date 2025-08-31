@@ -85,7 +85,10 @@ public partial class AppViewModel : ObservableObject, IDisposable
         DialogManager = dialogManager;
         ToastManager = toastManager;
         _pageNavigationService = pageNavigationService;
+#if DISABLE_UPDATE_SERVICE
+#else
         _updateService = updateService;
+#endif
         _migrationService = migrationService;
         _configService = configService;
 
@@ -113,10 +116,15 @@ public partial class AppViewModel : ObservableObject, IDisposable
                 new SukiColorTheme("Koko", Color.Parse("#B24DB0"), Color.Parse("#ED8E12"))
             );
 
+#if DISABLE_UPDATE_SERVICE
+        CurrentVersion = "v2.0.1";
+        VersionButtonText = $"Version {CurrentVersion}";
+#else
         _updateService.UpdateAvailable += OnUpdateAvailable;
         _updateService.UpdateError += OnUpdateError;
         CurrentVersion = _updateService.CurrentVersion?.ToString() ?? "Unknown";
         UpdateVersionButtonText();
+#endif
     }
 
     public IAvaloniaReadOnlyList<ViewModelBase> AppPages { get; }
@@ -353,6 +361,20 @@ public partial class AppViewModel : ObservableObject, IDisposable
 
     #region Update Management - EXACT copy from SplashViewModel
 
+#if DISABLE_UPDATE_SERVICE
+    [RelayCommand]
+    private void ShowUpdateInfo()
+    {
+        var url = "https://github.com/AnonymerNiklasistanonym/SimpleTwitchEmoteSounds/releases";
+#if WINDOWS
+        Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") { CreateNoWindow = true });
+#elif MACOS
+        Process.Start("open", url);
+#else // Linux and others
+        Process.Start("xdg-open", url);
+#endif
+    }
+#else
     [RelayCommand]
     private async Task ShowUpdateInfo()
     {
@@ -485,6 +507,7 @@ public partial class AppViewModel : ObservableObject, IDisposable
         }
         return "0 bytes";
     }
+#endif
 
     #endregion
 
@@ -512,8 +535,11 @@ public partial class AppViewModel : ObservableObject, IDisposable
 
         try
         {
+#if DISABLE_UPDATE_SERVICE
+#else
             _updateService.UpdateAvailable -= OnUpdateAvailable;
             _updateService.UpdateError -= OnUpdateError;
+#endif
         }
         finally
         {

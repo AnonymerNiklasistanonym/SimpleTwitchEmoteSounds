@@ -22,11 +22,14 @@ internal static class Program
     {
         VelopackApp.Build().Run();
 
+#if DISABLE_UPDATE_SERVICE
+#else
         if (args.Length > 0 && args[0] == "--force-update")
         {
             await HandleForceUpdateAsync();
             return;
         }
+#endif
 
         var logConfig = new LoggerConfiguration();
 
@@ -88,6 +91,9 @@ internal static class Program
             )
             .CreateLogger();
 
+#if DISABLE_UPDATE_SERVICE
+        Log.CloseAndFlush();
+#else
         try
         {
             Log.Information("Force update requested via command line");
@@ -132,6 +138,7 @@ internal static class Program
         {
             Log.CloseAndFlush();
         }
+#endif
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.
